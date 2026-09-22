@@ -3,6 +3,7 @@ from datetime import datetime
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+from rich.text import Text
 
 from portwatch.domain.models import PortInfo
 
@@ -11,8 +12,8 @@ def print_inspection(console: Console, item: PortInfo) -> None:
     details = Table.grid(padding=(0, 2))
     details.add_column(style="bold bright_white", width=12)
     details.add_column(style="white")
-    values = {
-        "Status": f"[bold green]{item.status}[/bold green]",
+    values: dict[str, str | Text] = {
+        "Status": Text(item.status, style="bold green"),
         "Protocol": item.protocol.upper(),
         "Process": item.process_name or "-",
         "PID": item.pid or "-",
@@ -22,7 +23,7 @@ def print_inspection(console: Console, item: PortInfo) -> None:
         "Started": format_started(item.started_at),
     }
     for label, value in values.items():
-        details.add_row(label, str(value))
+        details.add_row(label, value if isinstance(value, Text) else Text(str(value)))
     console.print(Panel(details, title=f"[bold cyan]Port {item.port}[/bold cyan]", border_style="cyan"))
 
 
