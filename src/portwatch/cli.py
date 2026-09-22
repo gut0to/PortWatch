@@ -13,7 +13,7 @@ from portwatch.domain.exceptions import (
 )
 from portwatch.presentation.console import print_inspection
 from portwatch.presentation.serializers import port_to_dict, ports_to_json
-from portwatch.presentation.tables import ports_table
+from portwatch.presentation.tables import ports_table, watch_view
 from portwatch.services.port_service import PortService
 from portwatch.system.termination import ProcessTerminator
 from portwatch.utils.ports import parse_port_range
@@ -132,7 +132,7 @@ def watch(
                 ports = service.list_ports(
                     parsed_range
                 )
-                live.update(ports_table(ports))
+                live.update(watch_view(ports, interval))
                 time.sleep(interval)
     except KeyboardInterrupt:
         return

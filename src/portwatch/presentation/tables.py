@@ -1,5 +1,8 @@
 from rich.box import ROUNDED
+from rich.console import Group
+from rich.panel import Panel
 from rich.table import Table
+from rich.text import Text
 
 from portwatch.domain.models import PortInfo
 
@@ -28,3 +31,12 @@ def ports_table(ports: list[PortInfo]) -> Table:
             item.project_name or "-",
         )
     return table
+
+
+def watch_view(ports: list[PortInfo], interval: float) -> Group:
+    status = Text.assemble(
+        ("WATCHING ", "bold cyan"),
+        (f"{len(ports)} listening TCP ports", "white"),
+        (f"  refresh {interval:g}s", "dim"),
+    )
+    return Group(Panel(status, border_style="cyan"), ports_table(ports))
