@@ -30,3 +30,25 @@ def test_process_resolver_enriches_available_metadata(monkeypatch) -> None:
     assert result.command == "python -m http.server"
     assert result.working_directory == "C:/Projects/backend"
     assert result.started_at is not None
+
+
+def test_process_resolver_returns_unmodified_without_pid() -> None:
+    port = PortInfo(8000, "tcp", "LISTENING")
+
+    assert PsutilProcessResolver().enrich(port) == port
+
+
+def test_process_resolver_handles_denied_metadata(monkeypatch) -> None:
+    process = Mock()
+    process.name.side_effect = psutil.AccessDenied()
+    process.cmdline.side_effect = psutil.NoSuchProcess(1)
+    process.cwd.side_effect = psutil.ZombieProcess(1)
+    process.create_time.side_effect = OSError("denied")
+    monkeypatch.setattr("portwatch.system.processes.psutil.Process", Mock(return_value=process))
+
+    result = PsutilProcessResolver().enrich(PortInfo(8000, "tcp", "LISTENING", pid=1))
+
+    assert result.process_name is None
+    assert result.command is None
+    assert result.working_directory is None
+    assert result.started_at is None
