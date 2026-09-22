@@ -22,9 +22,12 @@ class ProjectDetector:
         if not working_directory:
             return None
         current = Path(working_directory)
-        if not current.is_dir():
+        try:
+            if not current.is_dir():
+                return None
+            for directory in (current, *current.parents):
+                if any((directory / marker).exists() for marker in PROJECT_MARKERS):
+                    return directory.name or str(directory)
+        except OSError:
             return None
-        for directory in (current, *current.parents):
-            if any((directory / marker).exists() for marker in PROJECT_MARKERS):
-                return directory.name or str(directory)
         return None
