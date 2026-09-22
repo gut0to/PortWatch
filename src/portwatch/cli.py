@@ -55,7 +55,10 @@ def list_ports(
     if as_json:
         typer.echo(ports_to_json(ports))
     else:
-        console.print(ports_table(ports))
+        if ports:
+            console.print(ports_table(ports))
+        else:
+            console.print("[dim]No listening TCP ports found.[/dim]")
         console.print(f"\n{len(ports)} ports listening")
 
 
