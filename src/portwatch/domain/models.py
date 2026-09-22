@@ -19,4 +19,3 @@ class PortInfo:
 class PortRange:
     start: int
     end: int
-
