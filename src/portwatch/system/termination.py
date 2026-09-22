@@ -17,5 +17,8 @@ class ProcessTerminator:
                     )
                 process.kill()
                 process.wait(timeout=wait_seconds)
-        except (psutil.AccessDenied, psutil.NoSuchProcess, psutil.ZombieProcess, OSError) as error:
+        except psutil.NoSuchProcess:
+            # A process can exit between discovery and termination; that is already success.
+            return
+        except (psutil.AccessDenied, psutil.ZombieProcess, OSError) as error:
             raise ProcessTerminationError(f"Could not terminate process {pid}: {error}") from error
