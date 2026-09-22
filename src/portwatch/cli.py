@@ -43,7 +43,9 @@ def main(
 
 @app.command("list")
 def list_ports(
-    port_range: Annotated[str | None, typer.Option("--range", help="Filter ports, e.g. 3000-9000.")] = None,
+    port_range: Annotated[
+        str | None, typer.Option("--range", help="Filter ports, e.g. 3000-9000.")
+    ] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Print machine-readable JSON.")] = False,
 ) -> None:
     try:
@@ -102,7 +104,9 @@ def next(
 def kill(
     port: Annotated[int, typer.Argument(help="Port whose process should be terminated.")],
     yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip confirmation.")] = False,
-    force: Annotated[bool, typer.Option("--force", help="Force termination if graceful exit fails.")] = False,
+    force: Annotated[
+        bool, typer.Option("--force", help="Force termination if graceful exit fails.")
+    ] = False,
 ) -> None:
     _terminate_port(port, yes=yes, force=force)
 
@@ -111,15 +115,21 @@ def kill(
 def free(
     port: Annotated[int, typer.Argument(help="Port to free.")],
     yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip confirmation.")] = False,
-    force: Annotated[bool, typer.Option("--force", help="Force termination if graceful exit fails.")] = False,
+    force: Annotated[
+        bool, typer.Option("--force", help="Force termination if graceful exit fails.")
+    ] = False,
 ) -> None:
     _terminate_port(port, yes=yes, force=force, confirm_label="Kill process?")
 
 
 @app.command()
 def watch(
-    interval: Annotated[float, typer.Option("--interval", min=0.2, help="Refresh interval in seconds.")] = 2.0,
-    port_range: Annotated[str | None, typer.Option("--range", help="Filter ports, e.g. 3000-9000.")] = None,
+    interval: Annotated[
+        float, typer.Option("--interval", min=0.2, help="Refresh interval in seconds.")
+    ] = 2.0,
+    port_range: Annotated[
+        str | None, typer.Option("--range", help="Filter ports, e.g. 3000-9000.")
+    ] = None,
 ) -> None:
     try:
         parsed_range = parse_port_range(port_range) if port_range else None
@@ -129,16 +139,16 @@ def watch(
     try:
         with Live(console=console, refresh_per_second=max(1, int(1 / interval))) as live:
             while True:
-                ports = service.list_ports(
-                    parsed_range
-                )
+                ports = service.list_ports(parsed_range)
                 live.update(watch_view(ports, interval))
                 time.sleep(interval)
     except KeyboardInterrupt:
         return
 
 
-def _terminate_port(port: int, yes: bool, force: bool, confirm_label: str = "Kill this process?") -> None:
+def _terminate_port(
+    port: int, yes: bool, force: bool, confirm_label: str = "Kill this process?"
+) -> None:
     try:
         item = service.inspect(port)
     except InvalidPortError as error:

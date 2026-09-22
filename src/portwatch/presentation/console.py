@@ -24,7 +24,9 @@ def print_inspection(console: Console, item: PortInfo) -> None:
     }
     for label, value in values.items():
         details.add_row(label, value if isinstance(value, Text) else Text(str(value)))
-    console.print(Panel(details, title=f"[bold cyan]Port {item.port}[/bold cyan]", border_style="cyan"))
+    console.print(
+        Panel(details, title=f"[bold cyan]Port {item.port}[/bold cyan]", border_style="cyan")
+    )
 
 
 def format_started(value: datetime | None) -> str:

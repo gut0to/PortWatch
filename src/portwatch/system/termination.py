@@ -10,11 +10,11 @@ class ProcessTerminator:
             process.terminate()
             try:
                 process.wait(timeout=wait_seconds)
-            except psutil.TimeoutExpired:
+            except psutil.TimeoutExpired as error:
                 if not force:
                     raise ProcessTerminationError(
                         "Process did not exit after a graceful termination request."
-                    )
+                    ) from error
                 process.kill()
                 process.wait(timeout=wait_seconds)
         except psutil.NoSuchProcess:
