@@ -16,7 +16,7 @@ def print_inspection(console: Console, item: PortInfo) -> None:
         "Status": Text(item.status, style="bold green"),
         "Protocol": item.protocol.upper(),
         "Process": item.process_name or "-",
-        "PID": item.pid or "-",
+        "PID": str(item.pid or "-"),
         "Command": item.command or "-",
         "Directory": item.working_directory or "-",
         "Project": item.project_name or "-",

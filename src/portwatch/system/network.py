@@ -1,9 +1,19 @@
+from __future__ import annotations
+
+import socket
 from collections.abc import Iterable
-from typing import Protocol
+from typing import Protocol, cast
 
 import psutil
 
 from portwatch.domain.models import PortInfo
+
+
+class ConnectionRecord(Protocol):
+    status: str
+    laddr: object
+    type: int
+    pid: int | None
 
 
 class NetworkScanner(Protocol):
@@ -16,8 +26,10 @@ class PsutilNetworkScanner:
         for connection in self._connections():
             if connection.status != psutil.CONN_LISTEN or not connection.laddr:
                 continue
-            port = int(connection.laddr.port)
-            protocol = "tcp" if connection.type == psutil.SOCK_STREAM else "udp"
+            port = self._port_from_address(connection.laddr)
+            if port is None:
+                continue
+            protocol = "tcp" if connection.type == socket.SOCK_STREAM else "udp"
             key = (port, protocol, connection.pid)
             ports[key] = PortInfo(
                 port=port,
@@ -28,8 +40,17 @@ class PsutilNetworkScanner:
         return sorted(ports.values(), key=lambda item: (item.port, item.protocol, item.pid or 0))
 
     @staticmethod
-    def _connections() -> Iterable[psutil._common.sconn]:
+    def _connections() -> Iterable[ConnectionRecord]:
         try:
-            return psutil.net_connections(kind="inet")
+            return cast(Iterable[ConnectionRecord], psutil.net_connections(kind="inet"))
         except psutil.AccessDenied:
             return []
+
+    @staticmethod
+    def _port_from_address(address: object) -> int | None:
+        port = getattr(address, "port", None)
+        if port is not None:
+            return int(port)
+        if isinstance(address, tuple) and len(address) >= 2:
+            return int(address[1])
+        return None
