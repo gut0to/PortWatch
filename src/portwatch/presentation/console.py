@@ -38,3 +38,8 @@ def format_started(value: datetime | None) -> str:
     if minutes:
         return f"{minutes}m ago"
     return f"{seconds}s ago"
+
+
+def format_port_count(count: int) -> str:
+    noun = "port" if count == 1 else "ports"
+    return f"{count} {noun} listening"

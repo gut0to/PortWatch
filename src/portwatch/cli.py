@@ -11,7 +11,7 @@ from portwatch.domain.exceptions import (
     PortNotFoundError,
     ProcessTerminationError,
 )
-from portwatch.presentation.console import print_inspection
+from portwatch.presentation.console import format_port_count, print_inspection
 from portwatch.presentation.serializers import port_to_dict, ports_to_json
 from portwatch.presentation.tables import ports_table, watch_view
 from portwatch.services.port_service import PortService
@@ -59,7 +59,7 @@ def list_ports(
             console.print(ports_table(ports))
         else:
             console.print("[dim]No listening TCP ports found.[/dim]")
-        console.print(f"\n{len(ports)} ports listening")
+        console.print(f"\n{format_port_count(len(ports))}")
 
 
 @app.command()
