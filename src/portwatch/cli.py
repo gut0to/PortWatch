@@ -1,14 +1,21 @@
 import json
+import time
 from typing import Annotated
 
 import typer
 from rich.console import Console
+from rich.live import Live
 
-from portwatch.domain.exceptions import InvalidPortError, PortNotFoundError
+from portwatch.domain.exceptions import (
+    InvalidPortError,
+    PortNotFoundError,
+    ProcessTerminationError,
+)
 from portwatch.presentation.console import print_inspection
 from portwatch.presentation.serializers import port_to_dict, ports_to_json
 from portwatch.presentation.tables import ports_table
 from portwatch.services.port_service import PortService
+from portwatch.system.termination import ProcessTerminator
 from portwatch.utils.ports import parse_port_range
 
 app = typer.Typer(
@@ -18,6 +25,7 @@ app = typer.Typer(
 )
 console = Console()
 service = PortService()
+terminator = ProcessTerminator()
 
 
 @app.callback(invoke_without_command=True)
@@ -85,6 +93,77 @@ def next(
         console.print(f"Next available port: {available}")
     else:
         typer.echo(str(available))
+
+
+@app.command()
+def kill(
+    port: Annotated[int, typer.Argument(help="Port whose process should be terminated.")],
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip confirmation.")] = False,
+    force: Annotated[bool, typer.Option("--force", help="Force termination if graceful exit fails.")] = False,
+) -> None:
+    _terminate_port(port, yes=yes, force=force)
+
+
+@app.command()
+def free(
+    port: Annotated[int, typer.Argument(help="Port to free.")],
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip confirmation.")] = False,
+    force: Annotated[bool, typer.Option("--force", help="Force termination if graceful exit fails.")] = False,
+) -> None:
+    _terminate_port(port, yes=yes, force=force, confirm_label="Kill process?")
+
+
+@app.command()
+def watch(
+    interval: Annotated[float, typer.Option("--interval", min=0.2, help="Refresh interval in seconds.")] = 2.0,
+    port_range: Annotated[str | None, typer.Option("--range", help="Filter ports, e.g. 3000-9000.")] = None,
+) -> None:
+    try:
+        parsed_range = parse_port_range(port_range) if port_range else None
+    except InvalidPortError as error:
+        _fail(str(error), 2)
+        return
+    try:
+        with Live(console=console, refresh_per_second=max(1, int(1 / interval))) as live:
+            while True:
+                ports = service.list_ports(
+                    (parsed_range.start, parsed_range.end) if parsed_range else None
+                )
+                live.update(ports_table(ports))
+                time.sleep(interval)
+    except KeyboardInterrupt:
+        return
+
+
+def _terminate_port(port: int, yes: bool, force: bool, confirm_label: str = "Kill this process?") -> None:
+    try:
+        item = service.inspect(port)
+    except InvalidPortError as error:
+        _fail(str(error), 2)
+        return
+    except PortNotFoundError:
+        typer.echo(f"Port {port} is available.")
+        return
+    console.print(f"Port {port} is being used by:\n\nProcess: {item.process_name or '-'}")
+    console.print(f"PID: {item.pid or '-'}\nProject: {item.project_name or '-'}\n")
+    if not yes and not typer.confirm(confirm_label, default=False):
+        typer.echo("Operation cancelled.")
+        return
+    if item.pid is None:
+        _fail("No process PID is available for this port.", 5)
+        return
+    try:
+        terminator.terminate(item.pid, force=force)
+    except ProcessTerminationError as error:
+        _fail(str(error), 5)
+        return
+    typer.echo("Process terminated.")
+    try:
+        service.inspect(port)
+    except PortNotFoundError:
+        typer.echo(f"Port {port} is now available.")
+        return
+    typer.echo(f"Port {port} is still in use.", err=True)
 
 
 def _fail(message: str, code: int) -> None:
