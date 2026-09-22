@@ -48,7 +48,7 @@ def list_ports(
 ) -> None:
     try:
         parsed_range = parse_port_range(port_range) if port_range else None
-        ports = service.list_ports((parsed_range.start, parsed_range.end) if parsed_range else None)
+        ports = service.list_ports(parsed_range)
     except InvalidPortError as error:
         _fail(str(error), 2)
         return
@@ -130,7 +130,7 @@ def watch(
         with Live(console=console, refresh_per_second=max(1, int(1 / interval))) as live:
             while True:
                 ports = service.list_ports(
-                    (parsed_range.start, parsed_range.end) if parsed_range else None
+                    parsed_range
                 )
                 live.update(ports_table(ports))
                 time.sleep(interval)

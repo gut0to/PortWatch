@@ -1,5 +1,5 @@
 from portwatch.domain.exceptions import PortNotFoundError
-from portwatch.domain.models import PortInfo
+from portwatch.domain.models import PortInfo, PortRange
 from portwatch.system.network import NetworkScanner, PsutilNetworkScanner
 from portwatch.system.processes import ProcessResolver, PsutilProcessResolver
 from portwatch.utils.ports import validate_port
@@ -18,12 +18,11 @@ class PortService:
         self.resolver = resolver or PsutilProcessResolver()
         self.project_detector = project_detector or ProjectDetector()
 
-    def list_ports(self, port_range: tuple[int, int] | None = None) -> list[PortInfo]:
+    def list_ports(self, port_range: PortRange | None = None) -> list[PortInfo]:
         ports = [self._enrich(item) for item in self.scanner.list_listening_ports()]
         if port_range is None:
             return ports
-        start, end = port_range
-        return [item for item in ports if start <= item.port <= end]
+        return [item for item in ports if port_range.start <= item.port <= port_range.end]
 
     def inspect(self, port: int) -> PortInfo:
         validate_port(port)
