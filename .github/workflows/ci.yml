@@ -25,4 +25,4 @@ jobs:
       - run: ruff check .
       - run: ruff format --check .
       - run: mypy src
-      - run: pytest --cov=portwatch --cov-report=term-missing
+      - run: pytest --cov=portwatch --cov-report=term-missing --cov-fail-under=100

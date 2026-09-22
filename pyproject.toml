@@ -50,3 +50,6 @@ files = ["src"]
 [tool.coverage.run]
 branch = true
 source = ["portwatch"]
+
+[tool.coverage.report]
+fail_under = 100
