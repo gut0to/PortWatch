@@ -1,6 +1,6 @@
 import json
 import time
-from typing import Annotated
+from typing import Annotated, NoReturn
 
 import typer
 from rich.console import Console
@@ -53,7 +53,6 @@ def list_ports(
         ports = service.list_ports(parsed_range)
     except InvalidPortError as error:
         _fail(str(error), 2)
-        return
     if as_json:
         typer.echo(ports_to_json(ports))
     else:
@@ -76,7 +75,6 @@ def inspect(
             typer.echo(str(error))
             raise typer.Exit(code=3) from error
         _fail(str(error), 2)
-        return
     if as_json:
         typer.echo(json.dumps(port_to_dict(item), indent=2))
     else:
@@ -92,7 +90,6 @@ def next(
         available = service.next_available(port)
     except InvalidPortError as error:
         _fail(str(error), 2)
-        return
     if verbose:
         console.print(f"Port {port} is {'available' if available == port else 'busy'}.")
         console.print(f"Next available port: {available}")
@@ -135,7 +132,6 @@ def watch(
         parsed_range = parse_port_range(port_range) if port_range else None
     except InvalidPortError as error:
         _fail(str(error), 2)
-        return
     try:
         with Live(console=console, refresh_per_second=max(1, int(1 / interval))) as live:
             while True:
@@ -153,7 +149,6 @@ def _terminate_port(
         item = service.inspect(port)
     except InvalidPortError as error:
         _fail(str(error), 2)
-        return
     except PortNotFoundError:
         typer.echo(f"Port {port} is available.")
         return
@@ -164,12 +159,10 @@ def _terminate_port(
         return
     if item.pid is None:
         _fail("No process PID is available for this port.", 5)
-        return
     try:
         terminator.terminate(item.pid, force=force)
     except ProcessTerminationError as error:
         _fail(str(error), 5)
-        return
     typer.echo("Process terminated.")
     try:
         service.inspect(port)
@@ -179,6 +172,6 @@ def _terminate_port(
     typer.echo(f"Port {port} is still in use.", err=True)
 
 
-def _fail(message: str, code: int) -> None:
+def _fail(message: str, code: int) -> NoReturn:
     typer.echo(message, err=True)
     raise typer.Exit(code=code)
