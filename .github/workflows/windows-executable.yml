@@ -38,6 +38,7 @@ jobs:
           path: dist/portwatch.exe*
           if-no-files-found: error
           retention-days: 14
+          compression-level: 0
 
   publish:
     name: Publish tagged release
