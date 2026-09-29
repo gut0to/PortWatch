@@ -8,3 +8,10 @@
 6. Use Conventional Commits and describe testing in the pull request.
 
 Please keep changes small, cross-platform, and local-first.
+
+## Build the Windows executable
+
+Use 64-bit Windows and Python 3.11 or newer. Install the bundling extra with
+`python -m pip install ".[bundle]"`, then run
+`python scripts/build_windows.py`. The helper builds the single-file executable,
+checks its CLI entry points, and writes a SHA-256 checksum beside it.
