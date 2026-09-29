@@ -38,6 +38,7 @@ terminal or add its containing folder to `PATH`. For example, in PowerShell:
 
 ```powershell
 dist\portwatch.exe --help
+dist\portwatch.exe --version
 dist\portwatch.exe inspect 3000
 ```
 
