@@ -8,6 +8,37 @@ Find out what's using your ports without memorizing `netstat`, `lsof` or `ss`.
 pip install portwatch
 ```
 
+## Windows executable
+
+The standalone Windows x64 build is a single `portwatch.exe` file and does not
+require Python to be installed on the target machine. Download the
+`portwatch-windows-x64` artifact from the latest successful **Windows
+executable** workflow run in GitHub Actions. Versioned releases also include
+the executable as a downloadable release asset.
+
+Each build includes a SHA-256 checksum file. In PowerShell, calculate the
+downloaded file's hash and compare it with the value in the checksum file:
+
+```powershell
+Get-FileHash .\portwatch.exe -Algorithm SHA256
+Get-Content .\portwatch.exe.sha256
+```
+
+To build it locally, use Windows with Python 3.11 or newer:
+
+```powershell
+python -m pip install ".[bundle]"
+python scripts/build_windows.py
+```
+
+The executable is written to `dist\portwatch.exe`. You can run it from a
+terminal or add its containing folder to `PATH`. For example, in PowerShell:
+
+```powershell
+dist\portwatch.exe --help
+dist\portwatch.exe inspect 3000
+```
+
 ## Quick start
 
 ```bash
