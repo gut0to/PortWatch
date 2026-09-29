@@ -9,7 +9,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 EXECUTABLE = PROJECT_ROOT / "dist" / "portwatch.exe"
 
@@ -21,17 +20,13 @@ def _write_checksum(executable: Path) -> Path:
             digest.update(chunk)
 
     checksum_path = executable.with_suffix(".exe.sha256")
-    checksum_path.write_text(
-        f"{digest.hexdigest()}  {executable.name}\n", encoding="ascii"
-    )
+    checksum_path.write_text(f"{digest.hexdigest()}  {executable.name}\n", encoding="ascii")
     return checksum_path
 
 
 def main() -> None:
     if sys.platform != "win32":
         raise SystemExit("The standalone executable must be built on Windows.")
-    if sys.version_info < (3, 11):
-        raise SystemExit("The standalone executable requires Python 3.11 or newer.")
     if platform.machine().casefold() not in {"amd64", "x86_64"}:
         raise SystemExit("The standalone executable must be built with 64-bit Python.")
 
