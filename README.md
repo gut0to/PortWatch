@@ -16,7 +16,8 @@ require Python to be installed on the target machine. Download the
 executable** workflow run in GitHub Actions. Versioned releases also include
 the executable as a downloadable release asset.
 Workflow artifacts are retained for 14 days; release assets remain attached to
-their versioned release.
+their versioned release. Pushing a tag whose name starts with `v` starts the
+release build and attaches both the executable and checksum.
 
 Each build includes a SHA-256 checksum file. In PowerShell, calculate the
 downloaded file's hash and compare it with the value in the checksum file:
