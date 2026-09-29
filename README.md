@@ -26,7 +26,7 @@ Get-FileHash .\portwatch.exe -Algorithm SHA256
 Get-Content .\portwatch.exe.sha256
 ```
 
-To build it locally, use Windows with Python 3.11 or newer:
+To build it locally, use 64-bit Windows with 64-bit Python 3.11 or newer:
 
 ```powershell
 python -m pip install ".[bundle]"
