@@ -16,6 +16,8 @@ EXECUTABLE = PROJECT_ROOT / "dist" / "portwatch.exe"
 def main() -> None:
     if sys.platform != "win32":
         raise SystemExit("The standalone executable must be built on Windows.")
+    if sys.version_info < (3, 11):
+        raise SystemExit("The standalone executable requires Python 3.11 or newer.")
     if platform.machine().casefold() not in {"amd64", "x86_64"}:
         raise SystemExit("The standalone executable must be built with 64-bit Python.")
 
