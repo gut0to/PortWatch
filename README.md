@@ -34,8 +34,9 @@ python -m pip install ".[bundle]"
 python scripts/build_windows.py
 ```
 
-The executable is written to `dist\portwatch.exe`. You can run it from a
-terminal or add its containing folder to `PATH`. For example, in PowerShell:
+The executable and its checksum are written to `dist\portwatch.exe` and
+`dist\portwatch.exe.sha256`. You can run it from a terminal or add its
+containing folder to `PATH`. For example, in PowerShell:
 
 ```powershell
 dist\portwatch.exe --help
