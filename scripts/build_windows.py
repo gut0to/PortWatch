@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import platform
 import subprocess
 import sys
@@ -32,6 +33,14 @@ def main() -> None:
 
     subprocess.run([str(EXECUTABLE), "--version"], cwd=PROJECT_ROOT, check=True)
     subprocess.run([str(EXECUTABLE), "--help"], cwd=PROJECT_ROOT, check=True)
+    port_list = subprocess.run(
+        [str(EXECUTABLE), "list", "--json"],
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        check=True,
+        text=True,
+    )
+    json.loads(port_list.stdout)
 
     digest = hashlib.sha256()
     with EXECUTABLE.open("rb") as executable_file:
