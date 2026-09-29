@@ -25,7 +25,7 @@ dev = [
     "types-psutil>=5.9",
 ]
 bundle = [
-    "pyinstaller>=6.10",
+    "pyinstaller>=6.10,<7",
 ]
 
 [project.scripts]
