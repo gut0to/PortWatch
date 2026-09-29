@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: windows-executable-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Build Windows executable
