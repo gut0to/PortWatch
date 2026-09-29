@@ -49,7 +49,11 @@ dist\portwatch.exe list --json
 dist\portwatch.exe inspect 3000
 dist\portwatch.exe next 3000
 dist\portwatch.exe watch
+dist\portwatch.exe free 3000
 ```
+
+The `free` command asks before terminating a process. Pass `--yes` only when
+you want to skip that confirmation.
 
 ## Quick start
 
