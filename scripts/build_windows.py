@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import platform
 import subprocess
 import sys
 from pathlib import Path
@@ -15,6 +16,8 @@ EXECUTABLE = PROJECT_ROOT / "dist" / "portwatch.exe"
 def main() -> None:
     if sys.platform != "win32":
         raise SystemExit("The standalone executable must be built on Windows.")
+    if platform.machine().casefold() not in {"amd64", "x86_64"}:
+        raise SystemExit("The standalone executable must be built with 64-bit Python.")
 
     subprocess.run(
         [sys.executable, "-m", "PyInstaller", "--clean", "--noconfirm", "portwatch.spec"],
