@@ -33,7 +33,11 @@ def main() -> None:
     subprocess.run([str(EXECUTABLE), "--version"], cwd=PROJECT_ROOT, check=True)
     subprocess.run([str(EXECUTABLE), "--help"], cwd=PROJECT_ROOT, check=True)
 
-    checksum = hashlib.sha256(EXECUTABLE.read_bytes()).hexdigest()
+    digest = hashlib.sha256()
+    with EXECUTABLE.open("rb") as executable_file:
+        for chunk in iter(lambda: executable_file.read(1024 * 1024), b""):
+            digest.update(chunk)
+    checksum = digest.hexdigest()
     checksum_path = EXECUTABLE.with_suffix(".exe.sha256")
     checksum_path.write_text(f"{checksum}  {EXECUTABLE.name}\n", encoding="ascii")
 
