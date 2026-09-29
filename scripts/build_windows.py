@@ -40,6 +40,8 @@ def main() -> None:
     checksum = digest.hexdigest()
     checksum_path = EXECUTABLE.with_suffix(".exe.sha256")
     checksum_path.write_text(f"{checksum}  {EXECUTABLE.name}\n", encoding="ascii")
+    print(f"Executable: {EXECUTABLE}")
+    print(f"Checksum: {checksum_path}")
 
 
 if __name__ == "__main__":
