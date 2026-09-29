@@ -41,6 +41,16 @@ dist\portwatch.exe --help
 dist\portwatch.exe inspect 3000
 ```
 
+The same commands are available from the executable:
+
+```powershell
+dist\portwatch.exe list
+dist\portwatch.exe list --json
+dist\portwatch.exe inspect 3000
+dist\portwatch.exe next 3000
+dist\portwatch.exe watch
+```
+
 ## Quick start
 
 ```bash
