@@ -12,6 +12,7 @@ jobs:
   build:
     name: Build Windows executable
     runs-on: windows-latest
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
