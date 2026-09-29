@@ -24,6 +24,9 @@ dev = [
     "ruff>=0.6",
     "types-psutil>=5.9",
 ]
+bundle = [
+    "pyinstaller>=6.10",
+]
 
 [project.scripts]
 portwatch = "portwatch.cli:app"
