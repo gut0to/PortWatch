@@ -15,3 +15,5 @@ Use 64-bit Windows and Python 3.11 or newer. Install the bundling extra with
 `python -m pip install ".[bundle]"`, then run
 `python scripts/build_windows.py`. The helper builds the single-file executable,
 checks its CLI entry points, and writes a SHA-256 checksum beside it.
+The **Windows executable** workflow runs for pushes and pull requests, and can
+also be started manually from the repository's Actions page.
