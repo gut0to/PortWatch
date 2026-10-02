@@ -13,6 +13,7 @@ from portwatch.domain.exceptions import (
     ProcessTerminationError,
 )
 from portwatch.presentation.console import format_port_count, print_inspection
+from portwatch.presentation.errors import report_system_errors
 from portwatch.presentation.serializers import port_to_dict, ports_to_json
 from portwatch.presentation.tables import ports_table, watch_view
 from portwatch.services.port_service import PortService
@@ -44,6 +45,7 @@ def main(
 
 
 @app.command("list")
+@report_system_errors
 def list_ports(
     port_range: Annotated[
         str | None, typer.Option("--range", help="Filter ports, e.g. 3000-9000.")
@@ -66,6 +68,7 @@ def list_ports(
 
 
 @app.command()
+@report_system_errors
 def inspect(
     port: Annotated[int, typer.Argument(help="Port to inspect.")],
     as_json: Annotated[bool, typer.Option("--json", help="Print machine-readable JSON.")] = False,
@@ -83,6 +86,7 @@ def inspect(
 
 
 @app.command()
+@report_system_errors
 def next(
     port: Annotated[int, typer.Argument(help="Starting port.")],
     verbose: Annotated[bool, typer.Option("--verbose", help="Explain the result.")] = False,
@@ -101,6 +105,7 @@ def next(
 
 
 @app.command()
+@report_system_errors
 def kill(
     port: Annotated[int, typer.Argument(help="Port whose process should be terminated.")],
     yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip confirmation.")] = False,
@@ -112,6 +117,7 @@ def kill(
 
 
 @app.command()
+@report_system_errors
 def free(
     port: Annotated[int, typer.Argument(help="Port to free.")],
     yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip confirmation.")] = False,
@@ -123,6 +129,7 @@ def free(
 
 
 @app.command()
+@report_system_errors
 def watch(
     interval: Annotated[
         float, typer.Option("--interval", min=0.2, help="Refresh interval in seconds.")

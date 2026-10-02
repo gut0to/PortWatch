@@ -28,9 +28,13 @@ def test_next_exhaustion_reports_a_stable_error(monkeypatch) -> None:
 
 @pytest.mark.parametrize(
     ("arguments", "method"),
-    [(["list", "--json"], "list_ports"), (["inspect", "3000"], "inspect"),
-     (["next", "3000"], "next_available"), (["watch"], "list_ports"),
-     (["free", "3000", "--yes"], "inspect")],
+    [
+        (["list", "--json"], "list_ports"),
+        (["inspect", "3000"], "inspect"),
+        (["next", "3000"], "next_available"),
+        (["watch"], "list_ports"),
+        (["free", "3000", "--yes"], "inspect"),
+    ],
 )
 @pytest.mark.parametrize(
     ("error", "code"), [(PermissionDeniedError("Denied"), 4), (OSError("Unavailable"), 1)]
