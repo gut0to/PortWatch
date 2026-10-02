@@ -9,7 +9,12 @@ a = Analysis(
     [str(project_root / "src" / "portwatch" / "__main__.py")],
     pathex=[str(project_root / "src")],
     binaries=[],
-    datas=[],
+    datas=[
+        (
+            str(project_root / "src" / "portwatch" / "web" / "static"),
+            "portwatch/web/static",
+        )
+    ],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
