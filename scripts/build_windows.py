@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import platform
+import struct
 import subprocess
 import sys
 from pathlib import Path
@@ -27,7 +28,7 @@ def _write_checksum(executable: Path) -> Path:
 def main() -> None:
     if sys.platform != "win32":
         raise SystemExit("The standalone executable must be built on Windows.")
-    if platform.machine().casefold() not in {"amd64", "x86_64"}:
+    if struct.calcsize("P") != 8 or platform.machine().casefold() not in {"amd64", "x86_64"}:
         raise SystemExit("The standalone executable must be built with 64-bit Python.")
 
     subprocess.run(
