@@ -6,6 +6,7 @@ from typing import Protocol, cast
 
 import psutil
 
+from portwatch.domain.exceptions import PermissionDeniedError
 from portwatch.domain.models import PortInfo
 
 
@@ -43,8 +44,10 @@ class PsutilNetworkScanner:
     def _connections() -> Iterable[ConnectionRecord]:
         try:
             return cast(Iterable[ConnectionRecord], psutil.net_connections(kind="inet"))
-        except psutil.AccessDenied:
-            return []
+        except psutil.AccessDenied as error:
+            raise PermissionDeniedError(
+                "Insufficient permission to scan TCP listeners. Try an elevated terminal."
+            ) from error
 
     @staticmethod
     def _port_from_address(address: object) -> int | None:
