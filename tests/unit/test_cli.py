@@ -116,7 +116,7 @@ def test_kill_success_cancellation_and_still_busy(monkeypatch) -> None:
     assert "cancelled" in cancelled.stdout
 
     busy = runner.invoke(app, ["kill", "3000", "--yes"])
-    assert busy.exit_code == 0
+    assert busy.exit_code == 5
     assert "still in use" in busy.stderr
 
 
