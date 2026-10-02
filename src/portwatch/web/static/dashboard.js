@@ -15,6 +15,7 @@ const state = {
   ports: [],
   selectedListener: null,
   scanning: false,
+  pendingTermination: null,
 };
 
 async function scan() {
@@ -114,6 +115,7 @@ async function copyValue(value, label) {
 function openConfirmation() {
   const port = state.ports.find((item) => listenerKey(item) === state.selectedListener);
   if (!port?.pid) return;
+  state.pendingTermination = { ...port };
   elements.confirmProcess.textContent = port.process_name || "Unknown process";
   elements.confirmPid.textContent = String(port.pid);
   elements.confirmPort.textContent = String(port.port);
@@ -121,7 +123,7 @@ function openConfirmation() {
 }
 
 async function terminateSelected() {
-  const port = state.ports.find((item) => listenerKey(item) === state.selectedListener);
+  const port = state.pendingTermination;
   if (!port?.pid || !state.token) return;
   elements.confirmTerminate.disabled = true;
   elements.confirmTerminate.textContent = "Stopping…";
@@ -163,6 +165,7 @@ elements.clearSearch.addEventListener("click", () => {
 });
 elements.terminate.addEventListener("click", openConfirmation);
 elements.cancelTerminate.addEventListener("click", () => elements.dialog.close());
+elements.dialog.addEventListener("close", () => { state.pendingTermination = null; });
 elements.confirmForm.addEventListener("submit", (event) => {
   event.preventDefault();
   terminateSelected();
