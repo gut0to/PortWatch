@@ -96,7 +96,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             pid = payload.get("pid")
             if not isinstance(pid, int) or isinstance(pid, bool) or pid <= 0:
                 raise ValueError("A valid process ID is required.")
-        except (ValueError, json.JSONDecodeError) as error:
+        except (ValueError, UnicodeDecodeError) as error:
             self._send_error(HTTPStatus.BAD_REQUEST, str(error))
             return
 
