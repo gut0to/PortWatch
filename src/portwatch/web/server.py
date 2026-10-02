@@ -17,6 +17,7 @@ from portwatch.presentation.serializers import port_to_dict
 from portwatch.services.port_service import PortService
 from portwatch.system.termination import ProcessTerminator
 from portwatch.utils.ports import parse_port_range
+from portwatch.web.actions import StaleListenerError, terminate_listener
 from portwatch.web.assets import read_static_asset
 from portwatch.web.security import (
     LOOPBACK_HOST,
@@ -131,35 +132,18 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             return
 
         try:
-            current_ports = self.server.service.list_ports()
+            message = terminate_listener(self.server.service, self.server.terminator, port, pid)
+        except StaleListenerError as error:
+            self._send_error(HTTPStatus.CONFLICT, str(error))
+            return
         except OSError as error:
             self._send_error(HTTPStatus.SERVICE_UNAVAILABLE, str(error))
             return
-
-        current = next(
-            (item for item in current_ports if item.port == port and item.pid == pid),
-            None,
-        )
-        if current is None:
-            same_port = any(item.port == port for item in current_ports)
-            message = (
-                "The process using this port changed. Rescan before trying again."
-                if same_port
-                else f"Port {port} is no longer listening. Rescan before trying again."
-            )
-            self._send_error(
-                HTTPStatus.CONFLICT,
-                message,
-            )
-            return
-
-        try:
-            self.server.terminator.terminate(pid)
         except ProcessTerminationError as error:
             self._send_error(HTTPStatus.CONFLICT, str(error))
             return
 
-        self._send_json(HTTPStatus.OK, {"message": f"Process {pid} was asked to stop."})
+        self._send_json(HTTPStatus.OK, {"message": message})
 
     def _read_json_body(self) -> dict[str, object]:
         if self.headers.get_content_type() != "application/json":
