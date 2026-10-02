@@ -7,6 +7,7 @@ from typer.testing import CliRunner
 
 import portwatch.cli as cli
 from portwatch.domain.exceptions import PermissionDeniedError, PortNotFoundError
+from portwatch.domain.models import PortInfo
 
 
 def test_missing_inspection_keeps_json_stdout_empty(monkeypatch) -> None:
@@ -45,3 +46,16 @@ def test_service_errors_are_reported_without_traceback(monkeypatch, arguments, m
     assert result.exit_code == code
     assert str(error) in result.stderr
     assert "Traceback" not in result.stderr
+
+
+@pytest.mark.parametrize("replacement", [PortInfo(3000, "tcp", "LISTENING", pid=99),
+                                       PortNotFoundError("available")])
+def test_confirmation_does_not_terminate_a_changed_listener(monkeypatch, replacement):
+    original = PortInfo(3000, "tcp", "LISTENING", pid=42)
+    monkeypatch.setattr(cli.service, "inspect", Mock(side_effect=[original, replacement]))
+    terminate = Mock()
+    monkeypatch.setattr(cli.terminator, "terminate", terminate)
+    result = CliRunner().invoke(cli.app, ["free", "3000"], input="y\n")
+    terminate.assert_not_called()
+    assert result.exit_code == 5
+    assert "changed" in result.stderr
