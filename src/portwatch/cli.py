@@ -74,8 +74,7 @@ def inspect(
         item = service.inspect(port)
     except (InvalidPortError, PortNotFoundError) as error:
         if isinstance(error, PortNotFoundError):
-            typer.echo(str(error))
-            raise typer.Exit(code=3) from error
+            _fail(str(error), 3)
         _fail(str(error), 2)
     if as_json:
         typer.echo(json.dumps(port_to_dict(item), indent=2))
