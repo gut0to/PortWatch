@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "portwatch"
-version = "0.1.0"
+version = "0.1.1"
 description = "Find out what's using your ports without memorizing netstat, lsof or ss."
 readme = "README.md"
 requires-python = ">=3.11"
