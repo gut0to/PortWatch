@@ -287,7 +287,7 @@ def test_get_rejects_foreign_host_invalid_ranges_and_system_errors(
     assert status == 403
     assert payload == {"error": "This dashboard is available on localhost only."}
 
-    for query in ("start=2&start=3", "start=9000&end=3000", "start=0", "end=65536"):
+    for query in ("start=2&start=3", "start=9000&end=3000", "start=0", "end=65536", "start=", "end="):
         status, payload, _ = request(server, "GET", f"/api/ports?{query}")
         assert status == 400
         assert isinstance(payload, dict) and "error" in payload
