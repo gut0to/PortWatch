@@ -118,6 +118,10 @@ def test_security_token_and_header_policy() -> None:
     assert SECURITY_HEADERS["Cache-Control"] == "no-store"
 
 
+def test_non_ascii_session_token_is_rejected_without_exception() -> None:
+    assert not compare_session_token("á", "valid")
+
+
 @pytest.mark.parametrize(
     ("host", "port", "accepted"),
     [
