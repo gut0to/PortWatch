@@ -1,5 +1,6 @@
 from unittest.mock import Mock
 
+import pytest
 from typer.testing import CliRunner
 
 import portwatch.cli as cli
@@ -175,3 +176,92 @@ def test_watch_stops_cleanly_on_keyboard_interrupt(monkeypatch) -> None:
     result = CliRunner().invoke(app, ["watch", "--interval", "0.2"])
 
     assert result.exit_code == 0
+
+
+class FakeDashboardServer:
+    url = "http://127.0.0.1:43210/"
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        return None
+
+    def serve_forever(self, poll_interval: float) -> None:
+        raise KeyboardInterrupt
+
+
+def test_dashboard_without_browser_prints_url_and_stops_cleanly(monkeypatch) -> None:
+    server = FakeDashboardServer()
+    monkeypatch.setattr(cli, "create_server", lambda *args: server)
+    open_browser = Mock()
+    monkeypatch.setattr(cli.webbrowser, "open_new_tab", open_browser)
+
+    result = CliRunner().invoke(app, ["dashboard", "--no-browser"])
+
+    assert result.exit_code == 0
+    assert server.url in result.stdout
+    assert "Dashboard stopped." in result.stdout
+    open_browser.assert_not_called()
+
+
+@pytest.mark.parametrize("browser_result", [False, OSError("browser failed")])
+def test_dashboard_reports_when_browser_does_not_open(monkeypatch, browser_result) -> None:
+    monkeypatch.setattr(cli, "create_server", lambda *args: FakeDashboardServer())
+    if isinstance(browser_result, Exception):
+        open_browser = Mock(side_effect=browser_result)
+    else:
+        open_browser = Mock(return_value=browser_result)
+    monkeypatch.setattr(cli.webbrowser, "open_new_tab", open_browser)
+
+    result = CliRunner().invoke(app, ["dashboard"])
+
+    assert result.exit_code == 0
+    assert "Open the local URL above in your browser." in result.stdout
+    assert "Dashboard stopped." in result.stdout
+
+
+def test_dashboard_reports_browser_specific_error(monkeypatch) -> None:
+    monkeypatch.setattr(cli, "create_server", lambda *args: FakeDashboardServer())
+    monkeypatch.setattr(
+        cli.webbrowser, "open_new_tab", Mock(side_effect=cli.webbrowser.Error("unavailable"))
+    )
+
+    result = CliRunner().invoke(app, ["dashboard"])
+
+    assert result.exit_code == 0
+    assert "Open the local URL above in your browser." in result.stdout
+
+
+def test_dashboard_continues_when_browser_opens(monkeypatch) -> None:
+    monkeypatch.setattr(cli, "create_server", lambda *args: FakeDashboardServer())
+    open_browser = Mock(return_value=True)
+    monkeypatch.setattr(cli.webbrowser, "open_new_tab", open_browser)
+
+    result = CliRunner().invoke(app, ["dashboard", "--port", "8123"])
+
+    assert result.exit_code == 0
+    assert "Open the local URL above" not in result.stdout
+    assert "Dashboard stopped." in result.stdout
+    open_browser.assert_called_once_with(FakeDashboardServer.url)
+
+
+def test_dashboard_rejects_invalid_port_before_server_creation(monkeypatch) -> None:
+    create = Mock()
+    monkeypatch.setattr(cli, "create_server", create)
+    monkeypatch.setattr(cli, "validate_port", Mock(side_effect=InvalidPortError("invalid port")))
+
+    result = CliRunner().invoke(app, ["dashboard", "--port", "8123"])
+
+    assert result.exit_code == 2
+    assert "invalid port" in result.stderr
+    create.assert_not_called()
+
+
+def test_dashboard_reports_server_start_error(monkeypatch) -> None:
+    monkeypatch.setattr(cli, "create_server", Mock(side_effect=OSError("port unavailable")))
+
+    result = CliRunner().invoke(app, ["dashboard", "--port", "8123"])
+
+    assert result.exit_code == 1
+    assert "Could not start the local dashboard: port unavailable" in result.stderr
