@@ -1,0 +1,257 @@
+@media (max-width: 1240px) {
+  .service-strip {
+    grid-template-columns: auto minmax(190px, 1fr) auto;
+  }
+
+  .range-form {
+    grid-column: 1 / 3;
+    grid-row: 2;
+    justify-self: end;
+    padding-bottom: 12px;
+  }
+
+  .rescan-button {
+    grid-column: 3;
+    grid-row: 1 / 3;
+  }
+
+  .workspace {
+    grid-template-areas:
+      "listeners routes"
+      "inspector inspector";
+    grid-template-columns: minmax(260px, 0.82fr) minmax(0, 2fr);
+  }
+
+  .inspector-panel {
+    display: grid;
+    grid-template-columns: minmax(220px, 0.8fr) minmax(220px, 1fr) minmax(220px, 1fr);
+    align-items: start;
+    gap: 12px 20px;
+  }
+
+  .inspector-heading {
+    grid-column: 1 / -1;
+  }
+
+  .process-facts {
+    grid-row: 2 / span 2;
+  }
+
+  .termination-area {
+    grid-column: 1 / -1;
+  }
+
+  .inspector-empty {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  body {
+    font-size: 14px;
+  }
+
+  .app-shell {
+    padding: 0 10px 8px;
+  }
+
+  .masthead {
+    min-height: 68px;
+  }
+
+  .wordmark {
+    gap: 9px;
+    font-size: 34px;
+  }
+
+  .wordmark-mark {
+    width: 27px;
+    height: 27px;
+  }
+
+  .connection-state {
+    gap: 7px;
+    font-size: 12px;
+  }
+
+  .service-strip {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    padding: 12px 0;
+  }
+
+  .scan-time {
+    min-width: 0;
+  }
+
+  .search-field {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .range-form {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-row: 3;
+    grid-template-columns: auto minmax(76px, 1fr) auto minmax(76px, 1fr);
+    width: 100%;
+    padding: 0;
+  }
+
+  .range-form input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .rescan-button {
+    grid-column: 2;
+    grid-row: 4;
+    justify-self: end;
+  }
+
+  .workspace {
+    min-height: 0;
+    grid-template-areas:
+      "listeners"
+      "routes"
+      "inspector";
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .listener-panel {
+    min-height: 250px;
+    max-height: 390px;
+  }
+
+  .route-panel {
+    min-height: 400px;
+  }
+
+  .inspector-panel {
+    display: flex;
+    min-height: 380px;
+    padding: 15px;
+  }
+
+  .panel-heading h2 {
+    font-size: 17px;
+  }
+
+  .route-heading-row {
+    min-height: 64px;
+    padding: 0 12px;
+  }
+
+  .route-heading-row h2 {
+    font-size: 19px;
+  }
+
+  .route-columns {
+    gap: 14px;
+    padding: 0 10px;
+    font-size: 10px;
+  }
+
+  .route-row {
+    min-height: 68px;
+    gap: 14px;
+    padding: 7px 10px;
+  }
+
+  .route-node {
+    min-height: 52px;
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .route-node:first-child::after,
+  .route-node:nth-child(2)::after {
+    right: -15px;
+    width: 14px;
+  }
+
+  .route-node:first-child::before,
+  .route-node:nth-child(2)::before {
+    right: -15px;
+  }
+
+  .node-primary {
+    font-size: 12px;
+  }
+
+  .node-primary.port-value {
+    font-size: 13px;
+  }
+
+  .node-secondary {
+    font-size: 10px;
+  }
+
+  .route-dot {
+    width: 8px;
+    height: 8px;
+  }
+
+  .status-footer {
+    align-items: flex-start;
+    padding-top: 9px;
+  }
+}
+
+@media (max-width: 390px) {
+  .connection-state {
+    font-size: 11px;
+  }
+
+  .list-columns,
+  .listener-row {
+    grid-template-columns: 0.68fr 0.9fr 0.9fr;
+    gap: 5px;
+    padding-right: 9px;
+    padding-left: 9px;
+  }
+
+  .route-columns {
+    gap: 8px;
+    font-size: 8px;
+  }
+
+  .route-row {
+    gap: 8px;
+    padding-right: 7px;
+    padding-left: 7px;
+  }
+
+  .route-node {
+    padding: 5px 4px;
+  }
+
+  .route-node:first-child::after,
+  .route-node:nth-child(2)::after {
+    right: -9px;
+    width: 8px;
+  }
+
+  .route-node:first-child::before,
+  .route-node:nth-child(2)::before {
+    right: -9px;
+  }
+
+  .status-footer {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
