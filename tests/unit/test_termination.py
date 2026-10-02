@@ -53,3 +53,11 @@ def test_terminator_reports_access_denied(monkeypatch) -> None:
 
     with pytest.raises(ProcessTerminationError):
         ProcessTerminator().terminate(42)
+
+
+def test_terminator_reports_timeout_after_forced_kill(monkeypatch) -> None:
+    process = Mock()
+    process.wait.side_effect = psutil.TimeoutExpired(0.5)
+    monkeypatch.setattr("portwatch.system.termination.psutil.Process", Mock(return_value=process))
+    with pytest.raises(ProcessTerminationError, match="did not exit"):
+        ProcessTerminator().terminate(42, force=True)
