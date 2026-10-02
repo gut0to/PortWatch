@@ -20,5 +20,9 @@ class ProcessTerminator:
         except psutil.NoSuchProcess:
             # A process can exit between discovery and termination; that is already success.
             return
+        except psutil.TimeoutExpired as error:
+            raise ProcessTerminationError(
+                f"Process {pid} did not exit after forced termination."
+            ) from error
         except (psutil.AccessDenied, psutil.ZombieProcess, OSError) as error:
             raise ProcessTerminationError(f"Could not terminate process {pid}: {error}") from error
