@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import secrets
 from datetime import datetime
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -19,8 +18,15 @@ from portwatch.services.port_service import PortService
 from portwatch.system.termination import ProcessTerminator
 from portwatch.utils.ports import parse_port_range
 from portwatch.web.assets import read_static_asset
+from portwatch.web.security import (
+    LOOPBACK_HOST,
+    SECURITY_HEADERS,
+    compare_session_token,
+    expected_host,
+    expected_origin,
+    new_session_token,
+)
 
-LOOPBACK_HOST = "127.0.0.1"
 MAX_REQUEST_BYTES = 4096
 MAX_PORT = 65535
 
@@ -74,7 +80,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         if not self._has_expected_origin():
             self._send_error(HTTPStatus.FORBIDDEN, "Requests must come from this dashboard.")
             return
-        if not secrets.compare_digest(
+        if not compare_session_token(
             self.headers.get("X-PortWatch-Token", ""), self.server.token
         ):
             self._send_error(HTTPStatus.FORBIDDEN, "Refresh the dashboard and try again.")
@@ -196,47 +202,17 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         self._send_json(status, {"error": message})
 
     def _security_headers(self) -> None:
-        self.send_header("Cache-Control", "no-store")
-        self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("X-Frame-Options", "DENY")
-        self.send_header("Referrer-Policy", "no-referrer")
-        self.send_header(
-            "Content-Security-Policy",
-            "default-src 'none'; script-src 'self'; style-src 'self'; "
-            "connect-src 'self'; img-src 'self'; font-src 'self'; "
-            "base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
-        )
+        for name, value in SECURITY_HEADERS.items():
+            self.send_header(name, value)
 
     def _has_expected_host(self) -> bool:
-        try:
-            host = urlsplit(f"//{self.headers.get('Host', '')}")
-            port = host.port if host.port is not None else 80
-        except ValueError:
-            return False
-        return (
-            host.hostname == LOOPBACK_HOST
-            and port == self.server.server_port
-            and host.username is None
-            and host.path == ""
-            and not host.query
-            and not host.fragment
-        )
+        return expected_host(self.headers.get("Host", ""), self.server.server_port)
 
     def _has_expected_origin(self) -> bool:
-        try:
-            origin = urlsplit(self.headers.get("Origin", ""))
-            port = origin.port if origin.port is not None else 80
-        except ValueError:
-            return False
-        return (
-            self._has_expected_host()
-            and origin.scheme == "http"
-            and origin.hostname == LOOPBACK_HOST
-            and port == self.server.server_port
-            and origin.username is None
-            and origin.path in {"", "/"}
-            and not origin.query
-            and not origin.fragment
+        return expected_origin(
+            self.headers.get("Origin", ""),
+            self.headers.get("Host", ""),
+            self.server.server_port,
         )
 
     @staticmethod
@@ -257,4 +233,4 @@ def create_server(
     port: int = 0,
 ) -> DashboardHTTPServer:
     """Create a server on IPv4 loopback, using a fresh token for write requests."""
-    return DashboardHTTPServer(port, service, terminator, secrets.token_urlsafe(32))
+    return DashboardHTTPServer(port, service, terminator, new_session_token())
