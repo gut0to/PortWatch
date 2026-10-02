@@ -214,7 +214,7 @@ def _terminate_port(
     except PortNotFoundError:
         typer.echo(f"Port {port} is now available.")
         return
-    typer.echo(f"Port {port} is still in use.", err=True)
+    _fail(f"Port {port} is still in use.", 5)
 
 
 def _fail(message: str, code: int) -> NoReturn:
