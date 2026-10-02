@@ -189,6 +189,16 @@ def test_read_static_asset_handles_mime_and_default_index(
     assert read_static_asset("/unknown.asset")[0] == "application/octet-stream"
 
 
+@pytest.mark.parametrize(
+    ("name", "mime"), [("app.js", "text/javascript"), ("app.css", "text/css")]
+)
+def test_packaged_assets_ignore_incorrect_windows_mime_registry(monkeypatch, tmp_path, name, mime):
+    (tmp_path / name).write_text("content", encoding="utf-8")
+    monkeypatch.setattr(assets, "STATIC_DIRECTORY", tmp_path)
+    monkeypatch.setattr(mimetypes, "guess_type", lambda _: ("text/plain", None))
+    assert read_static_asset(f"/{name}")[0] == f"{mime}; charset=utf-8"
+
+
 def test_read_static_asset_rejects_missing_directory_and_escape(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
