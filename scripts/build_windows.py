@@ -40,16 +40,29 @@ def main() -> None:
     if not EXECUTABLE.is_file():
         raise SystemExit(f"PyInstaller did not create the expected file: {EXECUTABLE}")
 
-    subprocess.run([str(EXECUTABLE), "--version"], cwd=PROJECT_ROOT, check=True)
-    subprocess.run([str(EXECUTABLE), "--help"], cwd=PROJECT_ROOT, check=True)
+    subprocess.run([str(EXECUTABLE), "--version"], cwd=PROJECT_ROOT, check=True, timeout=30)
+    subprocess.run([str(EXECUTABLE), "--help"], cwd=PROJECT_ROOT, check=True, timeout=30)
     port_list = subprocess.run(
         [str(EXECUTABLE), "list", "--json"],
         cwd=PROJECT_ROOT,
         capture_output=True,
         check=True,
         text=True,
+        timeout=30,
     )
     json.loads(port_list.stdout)
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(PROJECT_ROOT / "scripts" / "smoke_runtime.py"),
+            "--executable",
+            str(EXECUTABLE),
+        ],
+        cwd=PROJECT_ROOT,
+        check=True,
+        timeout=120,
+    )
 
     checksum_path = _write_checksum(EXECUTABLE)
     print(f"Executable: {EXECUTABLE}")
