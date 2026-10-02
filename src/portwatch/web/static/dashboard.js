@@ -114,9 +114,9 @@ async function copyValue(value, label) {
 function openConfirmation() {
   const port = state.ports.find((item) => listenerKey(item) === state.selectedListener);
   if (!port?.pid) return;
-  setFact(elements.confirmProcess, port.process_name || "Unknown process");
-  setFact(elements.confirmPid, String(port.pid));
-  setFact(elements.confirmPort, String(port.port));
+  elements.confirmProcess.textContent = port.process_name || "Unknown process";
+  elements.confirmPid.textContent = String(port.pid);
+  elements.confirmPort.textContent = String(port.port);
   elements.dialog.showModal();
 }
 
