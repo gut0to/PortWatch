@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import queue
 import re
 import socket
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -37,7 +39,24 @@ def stop_child(process: subprocess.Popen[str]) -> None:
         process.wait(timeout=5)
     _, alive = psutil.wait_procs(children, timeout=5)
     for child in alive:
-        child.kill()
+        try:
+            child.kill()
+        except psutil.NoSuchProcess:
+            pass
+
+
+def listener_identity(process: subprocess.Popen[str], timeout: float = 10) -> tuple[int, int]:
+    """Bound the startup handshake so fixture failure cannot hang the test."""
+    assert process.stdout is not None
+    lines: queue.Queue[str] = queue.Queue()
+    reader = threading.Thread(target=lambda: lines.put(process.stdout.readline()), daemon=True)
+    reader.start()
+    try:
+        line = lines.get(timeout=timeout)
+    except queue.Empty as error:
+        raise AssertionError("Listener fixture startup timed out") from error
+    port, pid = map(int, line.split())
+    return port, pid
 
 
 def verify_runtime(command: list[str]) -> None:
@@ -74,8 +93,7 @@ def verify_runtime(command: list[str]) -> None:
         )
         dashboard = None
         try:
-            assert fixture.stdout is not None
-            port, fixture_pid = map(int, fixture.stdout.readline().split())
+            port, fixture_pid = listener_identity(fixture)
             listed = json.loads(run("list", "--json"))
             assert any(item["port"] == port and item["pid"] == fixture_pid for item in listed)
             inspected = json.loads(run("inspect", str(port), "--json"))
@@ -137,9 +155,11 @@ def verify_runtime(command: list[str]) -> None:
                 fixture.wait(timeout=5)
                 run("inspect", str(port), "--json", expected=3)
         finally:
-            if dashboard is not None:
-                stop_child(dashboard)
-            stop_child(fixture)
+            try:
+                if dashboard is not None:
+                    stop_child(dashboard)
+            finally:
+                stop_child(fixture)
     print("Runtime smoke passed: CLI, live listeners, HTTP assets and confirmed termination.")
 
 
