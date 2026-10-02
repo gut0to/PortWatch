@@ -1,0 +1,129 @@
+{
+  "title": "Choose the PortWatch dashboard direction",
+  "question": "PortWatch watches real local listeners. Choose the visual system that will make their port, process, and project relationships easiest to operate.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Signal Interlocking",
+      "kicker": "THE ROLL",
+      "lineage": "railway signal cabin plans and interlocking diagrams",
+      "thesis": "Every listener reads as an occupied route with a traceable owner.",
+      "palette": ["#17232d", "#f2eee5", "#e75b3b", "#79b78c"],
+      "materials": ["enamel signal board", "printed engineering plate"],
+      "viewport": "One open route field. Port number, process, and project sit on connected rails; a slim service strip holds scan time, search, and range filters.",
+      "risk": "Rail colors can imply free or blocked states that the scanner does not know; every shown state must have a factual label.",
+      "raised": [
+        {"from": "eboy-pixorama-metropolis", "raise": "Keep every port and owner aligned to a crisp shared grid; no hidden details or novelty animation."},
+        {"from": "graphic-worlds-publishing-busytown-cross-section", "raise": "Name each process and detected project at the point its route resolves."},
+        {"from": "clouds-storms-auroras-iridescent-cloud-edge", "raise": "Pair every status color with the literal status text; the scanner reports listening, not inferred availability."},
+        {"from": "textiles-weave-drape-fashion-industrial-quote-grammar", "raise": "Keep labels literal and action copy direct; confirmation states stay distinct from passive scan states."},
+        {"from": "operate-a-cutting-bench-select-rail", "raise": "Keep selection anchored to one port as the list refreshes, without inventing a history timeline."},
+        {"from": "medium-native-ascii-live-scene-render", "raise": "Preserve strong single-ink contrast for dense values and never encode status by hue alone."}
+      ],
+      "comp": ".impeccable/mocks/decision/assigned.png"
+    },
+    {
+      "id": "model-pick",
+      "label": "The Switchboard",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "telephone exchange patch panels",
+      "thesis": "A live connection board makes each local port’s owner visible at a glance.",
+      "palette": ["#111c24", "#e9e1d1", "#e0a34c", "#88b8a1"],
+      "materials": ["black bakelite", "brass labels", "cotton patch cord"],
+      "viewport": "A horizontal exchange panel with numbered socket rails and straight, labeled runs to the process and project directory; the search field acts as the operator’s selector.",
+      "risk": "Ports are logical sockets, not physical cable connections; avoid implying network topology beyond the observed port-to-process relationship.",
+      "comp": ".impeccable/mocks/decision/model-pick.png"
+    },
+    {
+      "id": "challenger-eboy",
+      "label": "eBoy Pixorama Metropolis",
+      "lineage": "isometric pixel-art city blocks",
+      "thesis": "Every process becomes a tiny inhabitant in a zoomable digital town.",
+      "palette": ["#ff314c", "#00d6e8", "#ffc928", "#132b42"],
+      "materials": ["hard-edged pixel blocks", "isometric grid"],
+      "viewport": "A busy pixel city where each block can be explored to reveal process owners.",
+      "verdict": "declined",
+      "case": "Fuses poorly: port occupancy is a precise operational lookup, and city exploration obscures the owner relationship.",
+      "kept": "A shared pixel grid becomes exact alignment and immediate labels, without pixel art or hidden novelty.",
+      "risk": "Dense process names become illegible if the interface is reduced to sprites."
+    },
+    {
+      "id": "challenger-busytown",
+      "label": "Busytown Cross-Section",
+      "lineage": "labeled cutaway illustration spreads",
+      "thesis": "A continuous cutaway shows each port and the process busy behind it.",
+      "palette": ["#fffaf0", "#a23a30", "#e1ba45", "#426746"],
+      "materials": ["gouache on paper", "fine label leaders"],
+      "viewport": "A wall-to-wall illustrated machine room with labeled ports and working processes.",
+      "verdict": "declined",
+      "case": "Fuses poorly: the product has no visual machine room to explore, and illustration weakens dense live inventory.",
+      "kept": "Every real process and detected project gets a readable label at its endpoint.",
+      "risk": "A painted scene could imply hardware or process relationships that PortWatch did not observe."
+    },
+    {
+      "id": "challenger-clouds",
+      "label": "Iridescent Cloud Edge",
+      "lineage": "measured color fringes in atmospheric imaging",
+      "thesis": "Subtle color bands distinguish changing port activity.",
+      "palette": ["#f9fbfd", "#68717e", "#9bd9ca", "#d0a2cf"],
+      "materials": ["white field", "spectral hairlines"],
+      "viewport": "A calm white observation surface with fine color fringes on active rows.",
+      "verdict": "declined",
+      "case": "Fuses poorly: the current scanner exposes no measured activity trend or particle-like variable to visualize.",
+      "kept": "Restrict color to explicitly reported states and label them in text.",
+      "risk": "Soft atmospheric color can make live process state ambiguous."
+    },
+    {
+      "id": "challenger-textile",
+      "label": "Industrial Quote Grammar",
+      "lineage": "stockroom garment tags and hazard labeling",
+      "thesis": "Literal labels and safety marks turn port actions into a tagged tool panel.",
+      "palette": ["#f4f1e9", "#151719", "#ed642f"],
+      "materials": ["cotton label tape", "industrial nylon"],
+      "viewport": "A high-contrast tool rail with tagged process rows and conspicuous termination controls.",
+      "verdict": "declined",
+      "case": "Fuses poorly: quoted garment language and hazard stripes are a costume around ordinary port records.",
+      "kept": "Use direct, literal labels on every destructive action and confirmation.",
+      "risk": "Decorative warning marks would make routine scan data feel hazardous."
+    },
+    {
+      "id": "challenger-cutting-bench",
+      "label": "Film Cutting Bench",
+      "lineage": "perforated film select rails and edit benches",
+      "thesis": "A snapped rail records the listener selected for inspection.",
+      "palette": ["#111111", "#e6e1d6", "#ef7629"],
+      "materials": ["film perforations", "folded tape flag"],
+      "viewport": "A perforated horizontal strip of ports with one selected row flagged in orange.",
+      "verdict": "declined",
+      "case": "Fuses poorly: a film timeline promises retained history that this live scanner does not provide.",
+      "kept": "Anchor keyboard and pointer selection to one visible port row through refresh.",
+      "risk": "A scrub rail implies that past listener states can be replayed."
+    },
+    {
+      "id": "challenger-ascii",
+      "label": "ASCII Live Scene",
+      "lineage": "phosphor terminal character art",
+      "thesis": "A monospace character field renders active listeners as a live text scene.",
+      "palette": ["#07110d", "#b5f7c5", "#39b86c"],
+      "materials": ["single phosphor ink", "monospace cell grid"],
+      "viewport": "A dense terminal-like wall of port and process names, with live refresh in place.",
+      "verdict": "declined",
+      "case": "Fuses poorly: the port owner must be scannable as structured data, not rendered as character art.",
+      "kept": "Maintain high contrast and tabular alignment for process names and numeric ports.",
+      "risk": "A monochrome grid would make the web dashboard read as a decorative terminal."
+    }
+  ],
+  "reroll": {"registers": ["safer", "bolder"]},
+  "buildPath": {"value": "comp", "toggle": true},
+  "canon": true,
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "A clean local developer dashboard, executed at full craft.",
+    "palette": ["#f8fafc", "#152238", "#2875dd"],
+    "materials": ["quiet neutral surfaces", "precise tabular data"],
+    "viewport": "Search and a clear live-list table with owner details and an explicit terminate action.",
+    "risk": "Less distinctive than the chosen visual worlds; success depends on exceptional information hierarchy.",
+    "comp": ".impeccable/mocks/decision/canon.png"
+  },
+  "steer": true
+}

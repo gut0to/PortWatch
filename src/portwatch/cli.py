@@ -1,5 +1,6 @@
 import json
 import time
+import webbrowser
 from typing import Annotated, NoReturn
 
 import typer
@@ -16,7 +17,8 @@ from portwatch.presentation.serializers import port_to_dict, ports_to_json
 from portwatch.presentation.tables import ports_table, watch_view
 from portwatch.services.port_service import PortService
 from portwatch.system.termination import ProcessTerminator
-from portwatch.utils.ports import parse_port_range
+from portwatch.utils.ports import parse_port_range, validate_port
+from portwatch.web.server import create_server
 
 app = typer.Typer(
     name="portwatch",
@@ -140,6 +142,41 @@ def watch(
                 time.sleep(interval)
     except KeyboardInterrupt:
         return
+
+
+@app.command()
+def dashboard(
+    port: Annotated[
+        int, typer.Option(min=0, max=65535, help="Local port to use; 0 selects an open port.")
+    ] = 0,
+    no_browser: Annotated[
+        bool, typer.Option("--no-browser", help="Print the local URL without opening a browser.")
+    ] = False,
+) -> None:
+    """Open the local browser dashboard."""
+    if port:
+        try:
+            validate_port(port)
+        except InvalidPortError as error:
+            _fail(str(error), 2)
+
+    try:
+        server = create_server(service, terminator, port)
+    except OSError as error:
+        _fail(f"Could not start the local dashboard: {error}", 1)
+
+    with server:
+        console.print(f"PortWatch dashboard: [link={server.url}]{server.url}[/link]")
+        if not no_browser:
+            try:
+                if not webbrowser.open_new_tab(server.url):
+                    console.print("Open the local URL above in your browser.")
+            except (OSError, webbrowser.Error):
+                console.print("Open the local URL above in your browser.")
+        try:
+            server.serve_forever(poll_interval=0.5)
+        except KeyboardInterrupt:
+            console.print("Dashboard stopped.")
 
 
 def _terminate_port(

@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Find out what's using your ports without memorizing netstat, lsof or ss."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "MIT" }
+license = "MIT"
 authors = [{ name = "PortWatch contributors" }]
 dependencies = [
     "psutil>=5.9",
@@ -33,6 +33,9 @@ portwatch = "portwatch.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+portwatch = ["web/static/*.html", "web/static/*.css", "web/static/*.js", "web/static/*.svg"]
 
 [tool.ruff]
 line-length = 100

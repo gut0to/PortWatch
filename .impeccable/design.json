@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-02T01:01:16Z",
+  "title": "Design System: PortWatch",
+  "extensions": {
+    "colorMeta": {
+      "ink": { "role": "neutral", "displayName": "Ink Navy", "canonical": "#081827", "tonalRamp": ["oklch(15% 0.025 245)", "oklch(25% 0.025 245)", "oklch(35% 0.025 245)", "oklch(45% 0.025 245)", "oklch(55% 0.025 245)", "oklch(65% 0.025 245)", "oklch(75% 0.025 245)", "oklch(95% 0.025 245)"] },
+      "surface": { "role": "neutral", "displayName": "Deep Surface", "canonical": "#0a1b29", "tonalRamp": ["oklch(15% 0.025 245)", "oklch(25% 0.025 245)", "oklch(35% 0.025 245)", "oklch(45% 0.025 245)", "oklch(55% 0.025 245)", "oklch(65% 0.025 245)", "oklch(75% 0.025 245)", "oklch(95% 0.025 245)"] },
+      "surface-raised": { "role": "neutral", "displayName": "Raised Surface", "canonical": "#0e2232", "tonalRamp": ["oklch(15% 0.03 245)", "oklch(25% 0.03 245)", "oklch(35% 0.03 245)", "oklch(45% 0.03 245)", "oklch(55% 0.03 245)", "oklch(65% 0.03 245)", "oklch(75% 0.03 245)", "oklch(95% 0.03 245)"] },
+      "surface-selected": { "role": "neutral", "displayName": "Selected Surface", "canonical": "#10283a", "tonalRamp": ["oklch(15% 0.035 245)", "oklch(25% 0.035 245)", "oklch(35% 0.035 245)", "oklch(45% 0.035 245)", "oklch(55% 0.035 245)", "oklch(65% 0.035 245)", "oklch(75% 0.035 245)", "oklch(95% 0.035 245)"] },
+      "line": { "role": "neutral", "displayName": "Engineering Line", "canonical": "#1e3a52", "tonalRamp": ["oklch(15% 0.035 245)", "oklch(25% 0.035 245)", "oklch(35% 0.035 245)", "oklch(45% 0.035 245)", "oklch(55% 0.035 245)", "oklch(65% 0.035 245)", "oklch(75% 0.035 245)", "oklch(95% 0.035 245)"] },
+      "line-strong": { "role": "neutral", "displayName": "Strong Line", "canonical": "#31536c", "tonalRamp": ["oklch(15% 0.04 245)", "oklch(25% 0.04 245)", "oklch(35% 0.04 245)", "oklch(45% 0.04 245)", "oklch(55% 0.04 245)", "oklch(65% 0.04 245)", "oklch(75% 0.04 245)", "oklch(95% 0.04 245)"] },
+      "chalk": { "role": "neutral", "displayName": "Chalk", "canonical": "#f1f3f3", "tonalRamp": ["oklch(15% 0.005 230)", "oklch(25% 0.005 230)", "oklch(35% 0.005 230)", "oklch(45% 0.005 230)", "oklch(55% 0.005 230)", "oklch(65% 0.005 230)", "oklch(75% 0.005 230)", "oklch(95% 0.005 230)"] },
+      "muted": { "role": "neutral", "displayName": "Muted Blue Gray", "canonical": "#b1c6d8", "tonalRamp": ["oklch(15% 0.025 240)", "oklch(25% 0.025 240)", "oklch(35% 0.025 240)", "oklch(45% 0.025 240)", "oklch(55% 0.025 240)", "oklch(65% 0.025 240)", "oklch(75% 0.025 240)", "oklch(95% 0.025 240)"] },
+      "quiet": { "role": "neutral", "displayName": "Quiet Blue Gray", "canonical": "#91a9bd", "tonalRamp": ["oklch(15% 0.025 240)", "oklch(25% 0.025 240)", "oklch(35% 0.025 240)", "oklch(45% 0.025 240)", "oklch(55% 0.025 240)", "oklch(65% 0.025 240)", "oklch(75% 0.025 240)", "oklch(95% 0.025 240)"] },
+      "signal-green": { "role": "primary", "displayName": "Signal Green", "canonical": "#1df682", "tonalRamp": ["oklch(15% 0.12 150)", "oklch(25% 0.12 150)", "oklch(35% 0.12 150)", "oklch(45% 0.12 150)", "oklch(55% 0.12 150)", "oklch(65% 0.12 150)", "oklch(75% 0.12 150)", "oklch(95% 0.12 150)"] },
+      "signal-red": { "role": "secondary", "displayName": "Signal Red", "canonical": "#ff625b", "tonalRamp": ["oklch(15% 0.15 25)", "oklch(25% 0.15 25)", "oklch(35% 0.15 25)", "oklch(45% 0.15 25)", "oklch(55% 0.15 25)", "oklch(65% 0.15 25)", "oklch(75% 0.15 25)", "oklch(95% 0.15 25)"] },
+      "signal-amber": { "role": "tertiary", "displayName": "Signal Amber", "canonical": "#ffc36a", "tonalRamp": ["oklch(15% 0.12 75)", "oklch(25% 0.12 75)", "oklch(35% 0.12 75)", "oklch(45% 0.12 75)", "oklch(55% 0.12 75)", "oklch(65% 0.12 75)", "oklch(75% 0.12 75)", "oklch(95% 0.12 75)"] },
+      "focus": { "role": "primary", "displayName": "Focus Mint", "canonical": "#a0ffca", "tonalRamp": ["oklch(15% 0.08 155)", "oklch(25% 0.08 155)", "oklch(35% 0.08 155)", "oklch(45% 0.08 155)", "oklch(55% 0.08 155)", "oklch(65% 0.08 155)", "oklch(75% 0.08 155)", "oklch(95% 0.08 155)"] }
+    },
+    "shadows": [
+      { "name": "panel-lift", "value": "0 14px 32px rgb(0 0 0 / 10%)", "purpose": "Low ambient separation for the three workspace panels." },
+      { "name": "dialog-lift", "value": "0 22px 60px rgb(0 0 0 / 52%)", "purpose": "Raises the confirmation dialog above its dimmed backdrop." }
+    ],
+    "motion": [
+      { "name": "control-transition", "value": "140ms ease", "purpose": "Border, background, and color changes on controls." },
+      { "name": "route-draw", "value": "460ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Draws selected route connectors; reduced-motion preference shortens it." }
+    ],
+    "breakpoints": [
+      { "name": "workspace-two-column", "value": "1240px" },
+      { "name": "stacked-workspace", "value": "760px" },
+      { "name": "compact-route-spacing", "value": "390px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "refersTo": "search-field",
+      "description": "Searches listener ports, processes, and projects; focus shifts the border to signal green.",
+      "html": "<label class=\"ds-search\"><svg viewBox=\"0 0 20 20\" aria-hidden=\"true\"><circle cx=\"8.5\" cy=\"8.5\" r=\"5.5\"></circle><path d=\"m13 13 4 4\"></path></svg><input type=\"search\" placeholder=\"Search port, process, or project\"><kbd>/</kbd></label>",
+      "css": ".ds-search { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 12px; border: 1px solid #31536c; border-radius: 9px; background: #0a1b29; color: #f1f3f3; transition: border-color 140ms ease, background-color 140ms ease; } .ds-search:focus-within { border-color: #1df682; background: #0e2232; } .ds-search svg { width: 18px; height: 18px; flex: 0 0 auto; fill: none; stroke: #b1c6d8; stroke-linecap: round; stroke-width: 1.8; } .ds-search input { min-width: 0; width: 100%; border: 0; outline: 0; background: transparent; color: inherit; font: 14px 'Segoe UI', Arial, sans-serif; } .ds-search input::placeholder { color: #b1c6d8; } .ds-search kbd { padding: 1px 5px; border: 1px solid #31536c; border-radius: 5px; color: #b1c6d8; font: 12px Consolas, monospace; }"
+    },
+    {
+      "name": "Rescan Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Requests a fresh local listener scan.",
+      "html": "<button class=\"ds-rescan\" type=\"button\"><span aria-hidden=\"true\">↻</span> Rescan</button>",
+      "css": ".ds-rescan { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; gap: 9px; padding: 0 14px; border: 1px solid #3c78a4; border-radius: 8px; background: #10283b; color: #f1f3f3; font: 650 14px 'Segoe UI', Arial, sans-serif; transition: border-color 140ms ease, background-color 140ms ease; } .ds-rescan:hover:not(:disabled) { border-color: #1df682; background: #15374a; } .ds-rescan:focus-visible { outline: 2px solid #a0ffca; outline-offset: 3px; } .ds-rescan:disabled { cursor: not-allowed; opacity: .55; }"
+    },
+    {
+      "name": "Route Node",
+      "kind": "custom",
+      "refersTo": "route-node",
+      "description": "A port, process, or project value inside the connected route field.",
+      "html": "<div class=\"ds-route-node\"><span class=\"ds-lamp\"></span><span><strong>5173</strong><small>Listening · TCP</small></span></div>",
+      "css": ".ds-route-node { display: flex; min-height: 58px; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #31536c; border-radius: 9px; background: #0e2232; color: #f1f3f3; } .ds-lamp { width: 11px; height: 11px; flex: 0 0 auto; border: 2px solid #91a9bd; border-radius: 50%; background: #0e2232; } .ds-route-node strong, .ds-route-node small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-route-node strong { font: 600 14px 'Segoe UI', Arial, sans-serif; } .ds-route-node small { margin-top: 2px; color: #b1c6d8; font: 12px Consolas, monospace; }"
+    },
+    {
+      "name": "Selected Route",
+      "kind": "custom",
+      "refersTo": "selected-route",
+      "description": "Selectable route row; selected state traces all three ownership steps in green.",
+      "html": "<button class=\"ds-route\" aria-pressed=\"true\"><span class=\"ds-route-node\"><span class=\"ds-lamp\"></span><span><strong>5173</strong><small>Listening · TCP</small></span></span><span class=\"ds-arrow\">→</span><span class=\"ds-route-node\"><span class=\"ds-lamp\"></span><span><strong>node</strong><small>PID 4821</small></span></span></button>",
+      "css": ".ds-route { display: flex; width: 100%; align-items: center; gap: 10px; padding: 10px; border: 0; border-bottom: 1px solid #1e3a52; background: #0e2432; color: #f1f3f3; text-align: left; } .ds-route-node { display: flex; min-width: 0; flex: 1; align-items: center; gap: 8px; padding: 8px; border: 1px solid #228b59; border-radius: 9px; background: #102a30; } .ds-route .ds-lamp { border-color: #1df682; background: #1df682; box-shadow: 0 0 0 3px rgb(29 246 130 / 10%); } .ds-arrow { color: #1df682; } .ds-route:hover { background: #0d2130; } .ds-route:focus-visible { outline: 2px solid #a0ffca; outline-offset: 2px; }"
+    },
+    {
+      "name": "Listening Tag",
+      "kind": "chip",
+      "refersTo": "listening-tag",
+      "description": "Shows the scanner's literal listening protocol beside the selected listener.",
+      "html": "<span class=\"ds-listening\"><span aria-hidden=\"true\"></span>Listening · TCP</span>",
+      "css": ".ds-listening { display: inline-flex; min-height: 28px; align-items: center; gap: 7px; padding: 3px 8px; border: 1px solid #286747; border-radius: 999px; color: #b8ffd7; font: 650 12px 'Segoe UI', Arial, sans-serif; } .ds-listening > span { width: 7px; height: 7px; border-radius: 50%; background: #1df682; }"
+    },
+    {
+      "name": "Terminate Button",
+      "kind": "button",
+      "refersTo": "terminate-button",
+      "description": "Opens a confirmation for the selected process; never terminates directly.",
+      "html": "<button class=\"ds-terminate\" type=\"button\">Terminate process…</button>",
+      "css": ".ds-terminate { display: flex; width: 100%; min-height: 42px; align-items: center; padding: 0 14px; border: 1px solid #96433e; border-radius: 8px; background: #251b22; color: #ffaaa3; text-align: left; font: 650 14px 'Segoe UI', Arial, sans-serif; transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease; } .ds-terminate:hover:not(:disabled) { border-color: #ff625b; background: #352023; color: #ffd2ce; } .ds-terminate:focus-visible { outline: 2px solid #a0ffca; outline-offset: 3px; } .ds-terminate:disabled { cursor: not-allowed; opacity: .55; }"
+    },
+    {
+      "name": "Confirmation Dialog",
+      "kind": "custom",
+      "refersTo": "confirmation-dialog",
+      "description": "Repeats process, PID, and port before the user confirms termination.",
+      "html": "<section class=\"ds-dialog\"><h2>Stop this process?</h2><p>This may stop every service it runs.</p><dl><div><dt>Process</dt><dd>node</dd></div><div><dt>PID</dt><dd>4821</dd></div><div><dt>Port</dt><dd>5173</dd></div></dl><div class=\"ds-actions\"><button class=\"ds-keep\">Keep process</button><button class=\"ds-confirm\">Stop process</button></div></section>",
+      "css": ".ds-dialog { width: min(460px, calc(100vw - 32px)); padding: 25px; border: 1px solid #31536c; border-radius: 14px; background: #0b1e2c; color: #f1f3f3; box-shadow: 0 22px 60px rgb(0 0 0 / 52%); font-family: 'Segoe UI', Arial, sans-serif; } .ds-dialog h2 { margin: 0 0 7px; font: 400 26px Amaranth, 'Segoe UI', Arial, sans-serif; } .ds-dialog p, .ds-dialog dt { color: #b1c6d8; } .ds-dialog dl { margin: 18px 0; padding: 8px 12px; border: 1px solid #1e3a52; border-radius: 8px; background: #0a1b29; } .ds-dialog dl div { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid rgb(30 58 82 / 70%); } .ds-dialog dl div:last-child { border-bottom: 0; } .ds-dialog dd { margin: 0; } .ds-actions { display: flex; justify-content: flex-end; gap: 10px; } .ds-actions button { min-height: 42px; padding: 0 14px; border: 1px solid #31536c; border-radius: 8px; background: transparent; color: #b1c6d8; font: 650 14px 'Segoe UI', Arial, sans-serif; } .ds-actions .ds-confirm { border-color: #b44c46; background: #a5302d; color: #fff6f3; } .ds-actions .ds-confirm:hover { border-color: #ff625b; background: #c13d38; } .ds-actions button:focus-visible { outline: 2px solid #a0ffca; outline-offset: 3px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Signal Interlocking",
+    "overview": "PortWatch presents each live TCP listener as a route with a visible owner. Ink-navy surfaces, chalk text, fine blue rules, and aligned data make the board feel like an enamel signal panel built for inspection. The approved route-field composition is the visual center: Port → Process → Project remains one connected reading path.\n\nThe interface stays compact and factual. Green marks the selected route and appears alongside the literal listening status; red identifies errors and termination. The product reports local scan results and process details, so visual status never implies availability or health beyond the scanner's reported state. Termination stays a separate action with a confirmation that repeats the process, PID, and port.",
+    "keyCharacteristics": [
+      "Deep ink-navy surfaces with chalk text and fine blue dividers.",
+      "A connected three-step route field for port ownership.",
+      "Compact sans-serif controls and tabular monospace values.",
+      "Explicit local connection, listening, and termination states."
+    ],
+    "rules": [
+      { "name": "The Factual Signal Rule", "body": "Pair colored status with literal text. The board reports a listener as “Listening · TCP”; it does not infer a free port or process health.", "section": "colors" },
+      { "name": "The Tabular Data Rule", "body": "Keep port and PID values in the monospace stack with tabular numerals so adjacent records scan consistently.", "section": "typography" }
+    ],
+    "dos": [
+      "Do show listener ownership as one Port → Process → Project route.",
+      "Do use live scanner data and label unavailable process details explicitly.",
+      "Do pair colored status with the literal status text.",
+      "Do keep termination behind a confirmation that identifies the selected process, PID, and port.",
+      "Do preserve the listener, route, inspector order as the layout stacks."
+    ],
+    "donts": [
+      "Don't imply a port is free, healthy, or blocked unless the scanner reports that fact.",
+      "Don't turn the workspace into disconnected summary cards or hide the owner relationship.",
+      "Don't encode status by color alone.",
+      "Don't reduce critical labels or route content below readable sizes when adapting the layout."
+    ]
+  }
+}

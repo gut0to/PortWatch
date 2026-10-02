@@ -1,0 +1,5 @@
+{
+  "image": ".impeccable/mocks/signal-interlocking.png",
+  "prompt": "High-fidelity desktop web application mockup, 1440x900, PortWatch local developer utility. Direction Signal Interlocking: railway signal cabin logic, dark ink-blue enamel (#101a23), chalk white, signal red and green, amber warning accents, crisp thin rail lines. Real operational dashboard with localhost status; header PortWatch; service strip containing scan time, search and TCP range; compact left list of listening ports; central interlocking map connecting selected Port to Process to Project; right context panel with command, path, and actions. Include one visibly labeled SAMPLE DATA row for port 5173 Vite PID 2480, project storefront-ui. Secondary red outlined terminate action implies confirmation. Crafted serious devtool, strong hierarchy, precise spacing, desktop composition. Avoid generic SaaS cards, gradient, glassmorphism, marketing claims, oversized slogans, decorative terminal text, clutter. Exact brand PortWatch.",
+  "approved": false
+}

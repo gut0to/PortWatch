@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#081827" />
+    <title>PortWatch · Local listeners</title>
+    <link rel="icon" href="/mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/foundation.css" />
+    <link rel="stylesheet" href="/workspace.css" />
+    <link rel="stylesheet" href="/confirmation.css" />
+    <link rel="stylesheet" href="/utilities.css" />
+    <link rel="stylesheet" href="/responsive.css" />
+    <script src="/dashboard.js" type="module"></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="masthead">
+        <a class="wordmark" href="/" aria-label="PortWatch home">
+          <svg class="wordmark-mark" viewBox="0 0 40 40" aria-hidden="true">
+            <path d="M12 5v30M27 5v30M12 11h15M12 29h15" />
+            <circle cx="12" cy="11" r="5" />
+            <circle cx="27" cy="29" r="5" />
+          </svg>
+          <span>PortWatch</span>
+        </a>
+        <div class="connection-state" id="connection-state" role="status" aria-live="polite">
+          <span class="status-lamp" aria-hidden="true"></span>
+          <span id="connection-label">Connecting to localhost</span>
+        </div>
+      </header>
+
+      <section class="service-strip" aria-label="Listener scan controls">
+        <p class="scan-time" id="scan-time" role="status" aria-live="polite">
+          <span class="strip-label">Last scan</span>
+          <time id="scan-value">Waiting for the first scan</time>
+        </p>
+
+        <label class="search-field">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" /><path d="m13 13 4 4" /></svg>
+          <span class="visually-hidden">Search ports, processes, and projects</span>
+          <input id="search" type="search" placeholder="Search port, process, or project" autocomplete="off" />
+          <kbd aria-hidden="true">/</kbd>
+        </label>
+
+        <form class="range-form" id="range-form" novalidate>
+          <label class="strip-label" for="range-start">TCP port range</label>
+          <input id="range-start" type="number" inputmode="numeric" min="1" max="65535" value="1" aria-label="Start port" />
+          <span class="range-separator" aria-hidden="true">to</span>
+          <input id="range-end" type="number" inputmode="numeric" min="1" max="65535" value="65535" aria-label="End port" />
+        </form>
+
+        <button class="rescan-button" id="rescan" type="button">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16 8a6.2 6.2 0 0 0-10.9-2L3.5 8.1M4 3.8v4.4h4.4M4 12a6.2 6.2 0 0 0 10.9 2l1.6-2.1m0 4.3v-4.4h-4.4" /></svg>
+          <span>Rescan</span>
+        </button>
+      </section>
+
+      <p class="notice" id="notice" role="status" aria-live="polite" hidden></p>
+
+      <section class="workspace" aria-label="Listening port workspace">
+        <aside class="listener-panel" aria-labelledby="listener-heading">
+          <div class="panel-heading">
+            <h2 id="listener-heading">Listening TCP ports</h2>
+            <span class="port-count" id="port-count">—</span>
+          </div>
+          <div class="list-columns" aria-hidden="true">
+            <span>Port</span><span>Process</span><span>Project</span>
+          </div>
+          <ul class="listener-list" id="listener-list" aria-label="Detected listeners"></ul>
+          <div class="empty-state" id="list-state" hidden>
+            <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M9 10h22v20H9zM14 16h12M14 21h8M14 26h5" /></svg>
+            <p>No listening TCP ports in this range.</p>
+            <button type="button" class="quiet-button" id="empty-rescan">Rescan ports</button>
+          </div>
+        </aside>
+
+        <section class="route-panel" aria-labelledby="route-heading">
+          <div class="panel-heading route-heading-row">
+            <div>
+              <h2 id="route-heading">Port <span aria-hidden="true">→</span> Process <span aria-hidden="true">→</span> Project</h2>
+              <p class="panel-description">Follow the listener to its owner.</p>
+            </div>
+            <span class="sample-count" id="visible-count" aria-live="polite"></span>
+          </div>
+          <div class="route-columns" aria-hidden="true">
+            <span>Port</span><span>Process</span><span>Project directory</span>
+          </div>
+          <ol class="route-list" id="route-list" aria-label="Port ownership routes"></ol>
+          <div class="empty-state route-empty" id="route-state" hidden>
+            <p>No listeners match this search.</p>
+            <button type="button" class="quiet-button" id="clear-search">Clear search</button>
+          </div>
+        </section>
+
+        <aside class="inspector-panel" aria-labelledby="inspector-heading">
+          <div class="inspector-heading">
+            <h2 id="inspector-heading">Select a port</h2>
+            <span class="listening-tag" id="listening-tag" hidden>
+              <span class="status-lamp" aria-hidden="true"></span> Listening · TCP
+            </span>
+          </div>
+
+          <dl class="process-facts" id="process-facts">
+            <div><dt>Process</dt><dd id="fact-process">—</dd></div>
+            <div><dt>PID</dt><dd id="fact-pid">—</dd></div>
+            <div><dt>Project</dt><dd id="fact-project">—</dd></div>
+            <div><dt>Started</dt><dd id="fact-started">—</dd></div>
+          </dl>
+
+          <div class="detail-field">
+            <div class="field-heading"><h3>Command</h3><button class="copy-button" id="copy-command" type="button" aria-label="Copy command" disabled></button></div>
+            <code class="detail-value" id="fact-command">—</code>
+          </div>
+          <div class="detail-field">
+            <div class="field-heading"><h3>Working directory</h3><button class="copy-button" id="copy-directory" type="button" aria-label="Copy working directory" disabled></button></div>
+            <code class="detail-value" id="fact-directory">—</code>
+          </div>
+
+          <div class="termination-area">
+            <button class="terminate-button" id="terminate" type="button" disabled>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="4" width="12" height="12" rx="2" /><path d="M7 10h6" /></svg>
+              <span>Terminate process…</span>
+            </button>
+            <p>PortWatch will ask before stopping a process.</p>
+          </div>
+
+          <div class="inspector-empty" id="inspector-state">
+            <span class="route-dot" aria-hidden="true"></span>
+            <p>Select a listener to inspect its process and project.</p>
+          </div>
+        </aside>
+      </section>
+
+      <footer class="status-footer">
+        <span id="summary">Waiting for the first scan.</span>
+        <span class="footer-local"><span class="status-lamp" aria-hidden="true"></span>Local to this machine</span>
+      </footer>
+    </main>
+
+    <dialog class="confirm-dialog" id="confirm-dialog" aria-labelledby="confirm-heading" aria-describedby="confirm-copy">
+      <form method="dialog" id="confirm-form">
+        <div class="dialog-signal" aria-hidden="true"><span></span></div>
+        <h2 id="confirm-heading">Stop this process?</h2>
+        <p id="confirm-copy">This asks the selected process to exit and may stop every service it runs.</p>
+        <dl class="confirmation-facts">
+          <div><dt>Process</dt><dd id="confirm-process">—</dd></div>
+          <div><dt>PID</dt><dd id="confirm-pid">—</dd></div>
+          <div><dt>Port</dt><dd id="confirm-port">—</dd></div>
+        </dl>
+        <div class="dialog-actions">
+          <button class="quiet-button" id="cancel-terminate" value="cancel" type="button">Keep process</button>
+          <button class="confirm-terminate" id="confirm-terminate" value="confirm" type="submit">Stop process</button>
+        </div>
+      </form>
+    </dialog>
+  </body>
+</html>
