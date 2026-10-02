@@ -10,6 +10,7 @@
 - CLI errors use stderr and the documented codes for missing ports, permission failures,
   exhausted ports, and failed termination.
 - CLI termination rechecks the listener after confirmation and refuses to terminate PortWatch itself.
+- Linux processes awaiting parent reaping are recognized as exited instead of timing out as zombies.
 - Empty dashboard ranges and malformed action tokens are rejected explicitly.
 
 ### Changed

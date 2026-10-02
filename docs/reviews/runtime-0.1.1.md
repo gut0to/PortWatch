@@ -7,7 +7,7 @@ feature PRs were already merged into that history before `main` was created.
 
 ## Standards
 
-Nine findings were evaluated across the initial and final reviews:
+Ten findings were evaluated across the initial, final and cross-platform reviews:
 
 - Undefined dashboard confirmation helper: corrected and reproduced with real ES modules.
 - Listener identity becoming stale during CLI confirmation: PID and start time are rechecked.
@@ -18,6 +18,8 @@ Nine findings were evaluated across the initial and final reviews:
 - A still-occupied port reporting successful termination: now failure code 5.
 - Smoke cleanup losing children during races: disappearance is tolerated and cleanup is nested.
 - Unbounded fixture handshake: now has a ten-second deadline and regression test.
+- Linux zombie termination appearing to time out: exited processes awaiting parent reaping
+  are now recognized as stopped, with graceful and forced regression cases.
 
 The most consequential operational finding was stale identity before termination. The CLI now
 rechecks PID and start time; dashboard actions retain their fresh port/PID validation. A remaining
@@ -42,6 +44,8 @@ No scope creep or remaining specification blockers were identified in the final 
 ## Validation
 
 - Python unit/HTTP tests with the repository's 100% branch-coverage threshold.
+- Linux CI exposed a non-child zombie wait deadlock in the real HTTP smoke; the correction
+  is verified by repeating the original CI smoke on Python 3.11–3.13.
 - Ruff lint and formatting; strict Mypy checks.
 - Two JavaScript module regressions, including confirmation during selection changes.
 - Source and Windows executable smoke tests from an unrelated working directory.
