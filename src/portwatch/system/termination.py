@@ -1,10 +1,14 @@
+import os
+
 import psutil
 
-from portwatch.domain.exceptions import ProcessTerminationError
+from portwatch.domain.exceptions import PermissionDeniedError, ProcessTerminationError
 
 
 class ProcessTerminator:
     def terminate(self, pid: int, force: bool = False, wait_seconds: float = 0.5) -> None:
+        if pid == os.getpid():
+            raise ProcessTerminationError("PortWatch cannot terminate itself.")
         try:
             process = psutil.Process(pid)
             process.terminate()
@@ -24,5 +28,7 @@ class ProcessTerminator:
             raise ProcessTerminationError(
                 f"Process {pid} did not exit after forced termination."
             ) from error
-        except (psutil.AccessDenied, psutil.ZombieProcess, OSError) as error:
+        except psutil.AccessDenied as error:
+            raise PermissionDeniedError(f"Permission denied terminating process {pid}.") from error
+        except OSError as error:
             raise ProcessTerminationError(f"Could not terminate process {pid}: {error}") from error
