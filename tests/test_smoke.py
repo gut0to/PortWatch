@@ -1,7 +1,6 @@
 from typer.testing import CliRunner
 
 from portwatch import __version__
-
 from portwatch.cli import app
 
 
