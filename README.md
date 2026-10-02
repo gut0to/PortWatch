@@ -53,6 +53,7 @@ dist\portwatch.exe inspect 3000
 dist\portwatch.exe next 3000
 dist\portwatch.exe watch
 dist\portwatch.exe free 3000
+dist\portwatch.exe dashboard
 ```
 
 The `free` command asks before terminating a process. Pass `--yes` only when
@@ -66,7 +67,15 @@ portwatch inspect 3000
 portwatch next 3000
 portwatch free 3000
 portwatch watch
+portwatch dashboard
 ```
+
+`dashboard` opens a local browser view of listening TCP ports, their owning
+processes, and detected project directories. It binds only to `127.0.0.1`; no
+account or telemetry is used. The dashboard asks for confirmation before it
+requests that a process stop. Use `portwatch dashboard --no-browser` to print
+the local URL without opening a tab, or `--port 4100` to choose a fixed local
+port instead of an available one.
 
 Use `portwatch list --json` or `portwatch inspect 3000 --json` in scripts.
 
