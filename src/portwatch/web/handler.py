@@ -52,9 +52,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         if not self._has_expected_origin():
             self._send_error(HTTPStatus.FORBIDDEN, "Requests must come from this dashboard.")
             return
-        if not compare_session_token(
-            self.headers.get("X-PortWatch-Token", ""), self.server.token
-        ):
+        if not compare_session_token(self.headers.get("X-PortWatch-Token", ""), self.server.token):
             self._send_error(HTTPStatus.FORBIDDEN, "Refresh the dashboard and try again.")
             return
 
