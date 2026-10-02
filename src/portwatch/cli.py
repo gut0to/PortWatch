@@ -91,6 +91,8 @@ def next(
         available = service.next_available(port)
     except InvalidPortError as error:
         _fail(str(error), 2)
+    except PortNotFoundError as error:
+        _fail(str(error), 3)
     if verbose:
         console.print(f"Port {port} is {'available' if available == port else 'busy'}.")
         console.print(f"Next available port: {available}")
