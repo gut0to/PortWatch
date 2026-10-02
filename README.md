@@ -46,6 +46,15 @@ python -m pip install ".[bundle]"
 python scripts/build_windows.py
 ```
 
+If `dist\portwatch.exe` is already in use, build into a separate directory:
+
+```powershell
+.venv\Scripts\python.exe scripts/build_windows.py --output-dir dist\release-0.1.1
+```
+
+The build verifies the CLI, live port discovery, bundled dashboard assets and a
+confirmed termination using a disposable test process. It does not open a browser.
+
 The executable and its checksum are written to `dist\portwatch.exe` and
 `dist\portwatch.exe.sha256`. Double-click the executable to start the local
 dashboard. Keep its console window open while using the dashboard; press Ctrl+C
