@@ -3,7 +3,6 @@
 from unittest.mock import Mock
 
 import pytest
-
 from scripts import build_windows
 
 

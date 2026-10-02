@@ -71,3 +71,11 @@ def test_terminator_reports_timeout_after_forced_kill(monkeypatch) -> None:
     monkeypatch.setattr("portwatch.system.termination.psutil.Process", Mock(return_value=process))
     with pytest.raises(ProcessTerminationError, match="did not exit"):
         ProcessTerminator().terminate(42, force=True)
+
+
+def test_terminator_reports_operating_system_error(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "portwatch.system.termination.psutil.Process", Mock(side_effect=OSError("unavailable"))
+    )
+    with pytest.raises(ProcessTerminationError, match="unavailable"):
+        ProcessTerminator().terminate(42)
