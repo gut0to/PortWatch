@@ -63,7 +63,7 @@ def verify_runtime(command: list[str]) -> None:
         run("inspect", "0", "--json", expected=2)
         fixture_code = (
             "import socket,time,os; s=socket.socket(); s.bind(('127.0.0.1',0)); "
-            "s.listen(); print(s.getsockname()[1],flush=True); time.sleep(90)"
+            "s.listen(); print(s.getsockname()[1],os.getpid(),flush=True); time.sleep(90)"
         )
         fixture = subprocess.Popen(
             [sys.executable, "-u", "-c", fixture_code],
@@ -75,11 +75,11 @@ def verify_runtime(command: list[str]) -> None:
         dashboard = None
         try:
             assert fixture.stdout is not None
-            port = int(fixture.stdout.readline())
+            port, fixture_pid = map(int, fixture.stdout.readline().split())
             listed = json.loads(run("list", "--json"))
-            assert any(item["port"] == port and item["pid"] == fixture.pid for item in listed)
+            assert any(item["port"] == port and item["pid"] == fixture_pid for item in listed)
             inspected = json.loads(run("inspect", str(port), "--json"))
-            assert inspected["pid"] == fixture.pid
+            assert inspected["pid"] == fixture_pid
             assert int(run("next", str(port))) > port
             with socket.socket() as reservation:
                 reservation.bind(("127.0.0.1", 0))
@@ -115,7 +115,7 @@ def verify_runtime(command: list[str]) -> None:
                         if path.endswith(".js"):
                             assert response.headers.get_content_type() == "text/javascript"
                 with urlopen(f"{base}/api/ports?start={port}&end={port}", timeout=10) as response:
-                    assert json.load(response)["ports"][0]["pid"] == fixture.pid
+                    assert json.load(response)["ports"][0]["pid"] == fixture_pid
                 denied = Request(f"{base}/api/ports/{port}/terminate", data=b"{}")
                 try:
                     urlopen(denied, timeout=5)
@@ -125,7 +125,7 @@ def verify_runtime(command: list[str]) -> None:
                     raise AssertionError("Dashboard accepted an unauthenticated action")
                 action = Request(
                     f"{base}/api/ports/{port}/terminate",
-                    data=json.dumps({"pid": fixture.pid}).encode(),
+                    data=json.dumps({"pid": fixture_pid}).encode(),
                     headers={
                         "Origin": base,
                         "Content-Type": "application/json",
