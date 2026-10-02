@@ -8,6 +8,12 @@ from pathlib import Path
 from urllib.parse import unquote
 
 STATIC_DIRECTORY = Path(__file__).parent / "static"
+ASSET_CONTENT_TYPES = {
+    ".html": "text/html",
+    ".css": "text/css",
+    ".js": "text/javascript",
+    ".svg": "image/svg+xml",
+}
 
 
 def static_directory() -> Path:
@@ -26,7 +32,11 @@ def read_static_asset(request_path: str) -> tuple[str, bytes]:
     if not target.is_relative_to(root) or not target.is_file():
         raise OSError("Not a file inside the dashboard directory.")
 
-    content_type = mimetypes.guess_type(target.name)[0] or "application/octet-stream"
+    content_type = (
+        ASSET_CONTENT_TYPES.get(target.suffix.lower())
+        or mimetypes.guess_type(target.name)[0]
+        or "application/octet-stream"
+    )
     if content_type.startswith("text/") or content_type in {
         "application/javascript",
         "application/json",
