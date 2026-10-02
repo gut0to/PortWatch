@@ -3,7 +3,9 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import psutil
+import pytest
 
+from portwatch.domain.exceptions import PermissionDeniedError
 from portwatch.system.network import PsutilNetworkScanner
 
 
@@ -46,7 +48,8 @@ def test_network_scanner_handles_unusable_address_and_access_denied(monkeypatch)
     monkeypatch.setattr(
         "portwatch.system.network.psutil.net_connections", Mock(side_effect=psutil.AccessDenied())
     )
-    assert list(PsutilNetworkScanner._connections()) == []
+    with pytest.raises(PermissionDeniedError, match="permission"):
+        list(PsutilNetworkScanner._connections())
 
 
 def test_network_scanner_reads_object_port() -> None:
