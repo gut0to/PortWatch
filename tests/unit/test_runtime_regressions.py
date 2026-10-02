@@ -48,8 +48,9 @@ def test_service_errors_are_reported_without_traceback(monkeypatch, arguments, m
     assert "Traceback" not in result.stderr
 
 
-@pytest.mark.parametrize("replacement", [PortInfo(3000, "tcp", "LISTENING", pid=99),
-                                       PortNotFoundError("available")])
+@pytest.mark.parametrize(
+    "replacement", [PortInfo(3000, "tcp", "LISTENING", pid=99), PortNotFoundError("available")]
+)
 def test_confirmation_does_not_terminate_a_changed_listener(monkeypatch, replacement):
     original = PortInfo(3000, "tcp", "LISTENING", pid=42)
     monkeypatch.setattr(cli.service, "inspect", Mock(side_effect=[original, replacement]))

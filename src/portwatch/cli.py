@@ -205,6 +205,12 @@ def _terminate_port(
     if item.pid is None:
         _fail("No process PID is available for this port.", 5)
     try:
+        current = service.inspect(port)
+    except PortNotFoundError:
+        _fail("The listener changed during confirmation. Inspect the port again.", 5)
+    if (current.pid, current.started_at) != (item.pid, item.started_at):
+        _fail("The listener changed during confirmation. Inspect the port again.", 5)
+    try:
         terminator.terminate(item.pid, force=force)
     except ProcessTerminationError as error:
         _fail(str(error), 5)
