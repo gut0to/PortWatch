@@ -348,6 +348,7 @@ def test_post_rejects_origin_token_and_unknown_action(
             400,
         ),
         ("/api/ports/3000/terminate", b"{", {"Content-Type": "application/json"}, 400),
+        ("/api/ports/3000/terminate", b"\xff", {"Content-Type": "application/json"}, 400),
         ("/api/ports/3000/terminate", b"[]", {"Content-Type": "application/json"}, 400),
         ("/nope/3000/terminate", None, {"Content-Type": "application/json"}, 404),
         ("/api/ports/0/terminate", b"{}", {"Content-Type": "application/json"}, 400),
