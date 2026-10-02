@@ -1,0 +1,44 @@
+{
+  "title": "Choose the Signal Interlocking composition",
+  "question": "The Signal Interlocking direction is approved. Which composition makes the PortWatch listener and its owner easiest to inspect? Choose one; every example is illustrative.",
+  "options": [
+    {
+      "id": "interlocking",
+      "label": "Interlocking field",
+      "kicker": "REFERENCE COMPOSITION",
+      "lineage": "railway signal cabin plans and interlocking diagrams",
+      "thesis": "Every listener reads as an occupied route with a traceable owner.",
+      "palette": ["#17232d", "#f2eee5", "#e75b3b", "#79b78c"],
+      "materials": ["enamel signal board", "printed engineering plate"],
+      "viewport": "A narrow port selector leads into a broad Port → Process → Project field; a compact inspector holds command, path, and the confirmed termination action.",
+      "risk": "Several route colors can imply states the scanner does not measure; keep status literal and uniform.",
+      "comp": ".impeccable/mocks/decision/assigned.png"
+    },
+    {
+      "id": "route-field",
+      "label": "Route field",
+      "lineage": "railway interlocking diagram",
+      "thesis": "Trace each listener horizontally through its process to the detected project.",
+      "palette": ["#17232d", "#f2eee5", "#e75b3b", "#79b78c"],
+      "materials": ["enamel signal board", "printed engineering plate"],
+      "viewport": "A slim scan and filter strip sits above a compact port list, wide horizontal route diagram, and right-hand inspector.",
+      "risk": "The route must describe only the observed port-to-process and detected-project relationship.",
+      "comp": ".impeccable/mocks/signal-routes.png"
+    },
+    {
+      "id": "signal-ledger",
+      "label": "Signal ledger",
+      "lineage": "railway signal cabin plans",
+      "thesis": "A clean listener ledger leads into one compact route for the selected port.",
+      "palette": ["#17232d", "#f2eee5", "#e75b3b", "#79b78c"],
+      "materials": ["enamel signal board", "printed engineering plate"],
+      "viewport": "A wide, readable port table sits beside an inspector; one compact trace shows the selected port, process, and project.",
+      "risk": "Avoid encoding availability or process health through signal color; all rows are listening TCP records.",
+      "comp": ".impeccable/mocks/signal-ledger.png"
+    }
+  ],
+  "buildPath": {"value": "comp", "toggle": false},
+  "reroll": false,
+  "canon": false,
+  "steer": true
+}
