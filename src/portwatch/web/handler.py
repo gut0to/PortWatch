@@ -66,7 +66,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         """Keep routine local requests out of the CLI output."""
 
     def _list_ports(self, query: str) -> None:
-        parameters = parse_qs(query, strict_parsing=False)
+        parameters = parse_qs(query, strict_parsing=False, keep_blank_values=True)
         try:
             start = single_port_parameter(parameters, "start", "1")
             end = single_port_parameter(parameters, "end", str(MAX_PORT))
@@ -96,7 +96,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             pid = payload.get("pid")
             if not isinstance(pid, int) or isinstance(pid, bool) or pid <= 0:
                 raise ValueError("A valid process ID is required.")
-        except (ValueError, json.JSONDecodeError) as error:
+        except (ValueError, UnicodeDecodeError) as error:
             self._send_error(HTTPStatus.BAD_REQUEST, str(error))
             return
 

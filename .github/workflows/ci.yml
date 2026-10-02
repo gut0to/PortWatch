@@ -18,6 +18,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - run: python -m pip install --upgrade pip
       - run: pip install -e ".[dev]"
       - run: python -m portwatch --version
@@ -26,3 +29,5 @@ jobs:
       - run: ruff format --check .
       - run: mypy src
       - run: pytest --cov=portwatch --cov-report=term-missing --cov-fail-under=100
+      - run: node --experimental-vm-modules --test scripts/test_dashboard.mjs
+      - run: python scripts/smoke_runtime.py

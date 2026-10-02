@@ -63,4 +63,4 @@ def expected_origin(origin_header: str, host_header: str, port: int) -> bool:
 
 def compare_session_token(candidate: str, expected: str) -> bool:
     """Compare request tokens without leaking comparison timing."""
-    return secrets.compare_digest(candidate, expected)
+    return candidate.isascii() and secrets.compare_digest(candidate, expected)

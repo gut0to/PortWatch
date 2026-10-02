@@ -118,6 +118,10 @@ def test_security_token_and_header_policy() -> None:
     assert SECURITY_HEADERS["Cache-Control"] == "no-store"
 
 
+def test_non_ascii_session_token_is_rejected_without_exception() -> None:
+    assert not compare_session_token("á", "valid")
+
+
 @pytest.mark.parametrize(
     ("host", "port", "accepted"),
     [
@@ -187,6 +191,14 @@ def test_read_static_asset_handles_mime_and_default_index(
     assert read_static_asset("/unknown.asset")[0] == "application/json; charset=utf-8"
     monkeypatch.setattr(mimetypes, "guess_type", lambda _: (None, None))
     assert read_static_asset("/unknown.asset")[0] == "application/octet-stream"
+
+
+@pytest.mark.parametrize(("name", "mime"), [("app.js", "text/javascript"), ("app.css", "text/css")])
+def test_packaged_assets_ignore_incorrect_windows_mime_registry(monkeypatch, tmp_path, name, mime):
+    (tmp_path / name).write_text("content", encoding="utf-8")
+    monkeypatch.setattr(assets, "STATIC_DIRECTORY", tmp_path)
+    monkeypatch.setattr(mimetypes, "guess_type", lambda _: ("text/plain", None))
+    assert read_static_asset(f"/{name}")[0] == f"{mime}; charset=utf-8"
 
 
 def test_read_static_asset_rejects_missing_directory_and_escape(
@@ -273,7 +285,14 @@ def test_get_rejects_foreign_host_invalid_ranges_and_system_errors(
     assert status == 403
     assert payload == {"error": "This dashboard is available on localhost only."}
 
-    for query in ("start=2&start=3", "start=9000&end=3000", "start=0", "end=65536"):
+    for query in (
+        "start=2&start=3",
+        "start=9000&end=3000",
+        "start=0",
+        "end=65536",
+        "start=",
+        "end=",
+    ):
         status, payload, _ = request(server, "GET", f"/api/ports?{query}")
         assert status == 400
         assert isinstance(payload, dict) and "error" in payload
@@ -334,6 +353,7 @@ def test_post_rejects_origin_token_and_unknown_action(
             400,
         ),
         ("/api/ports/3000/terminate", b"{", {"Content-Type": "application/json"}, 400),
+        ("/api/ports/3000/terminate", b"\xff", {"Content-Type": "application/json"}, 400),
         ("/api/ports/3000/terminate", b"[]", {"Content-Type": "application/json"}, 400),
         ("/nope/3000/terminate", None, {"Content-Type": "application/json"}, 404),
         ("/api/ports/0/terminate", b"{}", {"Content-Type": "application/json"}, 400),

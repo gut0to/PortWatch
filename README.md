@@ -8,6 +8,18 @@ Find out what's using your ports without memorizing `netstat`, `lsof` or `ss`.
 pip install portwatch
 ```
 
+For a checkout on Windows, use Python 3.11 or newer in a virtual environment:
+
+```powershell
+py -3 -m venv .venv
+.venv\Scripts\python.exe -m pip install -e ".[dev,bundle]"
+.\run.ps1 --version
+.\run.ps1 dashboard --no-browser
+```
+
+Check `py -3 --version` before creating the environment. Python 3.10 is unsupported.
+The launcher uses `.venv` explicitly, so an older global Python does not interfere.
+
 ## Windows executable
 
 The standalone Windows x64 build is a single `portwatch.exe` file and does not
@@ -34,8 +46,22 @@ python -m pip install ".[bundle]"
 python scripts/build_windows.py
 ```
 
+If `dist\portwatch.exe` is already in use, build into a separate directory:
+
+```powershell
+.venv\Scripts\python.exe scripts/build_windows.py --output-dir dist\release-0.1.1
+```
+
+The build verifies the CLI, live port discovery, bundled dashboard assets and a
+confirmed termination using a disposable test process. It does not open a browser.
+
 The executable and its checksum are written to `dist\portwatch.exe` and
-`dist\portwatch.exe.sha256`. You can run it from a terminal or add its
+`dist\portwatch.exe.sha256`. Double-click the executable to start the local
+dashboard. Keep its console window open while using the dashboard; press Ctrl+C
+in that window to stop it. If the browser does not open, use the printed local URL.
+Launching the executable without arguments from a terminal also starts the dashboard.
+Use the explicit `list` command to print a port list and exit.
+You can run it from a terminal or add its
 containing folder to `PATH`. For example, in PowerShell:
 
 ```powershell

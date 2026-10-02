@@ -13,6 +13,7 @@ from portwatch.domain.exceptions import (
     ProcessTerminationError,
 )
 from portwatch.presentation.console import format_port_count, print_inspection
+from portwatch.presentation.errors import report_system_errors
 from portwatch.presentation.serializers import port_to_dict, ports_to_json
 from portwatch.presentation.tables import ports_table, watch_view
 from portwatch.services.port_service import PortService
@@ -44,6 +45,7 @@ def main(
 
 
 @app.command("list")
+@report_system_errors
 def list_ports(
     port_range: Annotated[
         str | None, typer.Option("--range", help="Filter ports, e.g. 3000-9000.")
@@ -66,6 +68,7 @@ def list_ports(
 
 
 @app.command()
+@report_system_errors
 def inspect(
     port: Annotated[int, typer.Argument(help="Port to inspect.")],
     as_json: Annotated[bool, typer.Option("--json", help="Print machine-readable JSON.")] = False,
@@ -74,8 +77,7 @@ def inspect(
         item = service.inspect(port)
     except (InvalidPortError, PortNotFoundError) as error:
         if isinstance(error, PortNotFoundError):
-            typer.echo(str(error))
-            raise typer.Exit(code=3) from error
+            _fail(str(error), 3)
         _fail(str(error), 2)
     if as_json:
         typer.echo(json.dumps(port_to_dict(item), indent=2))
@@ -84,6 +86,7 @@ def inspect(
 
 
 @app.command()
+@report_system_errors
 def next(
     port: Annotated[int, typer.Argument(help="Starting port.")],
     verbose: Annotated[bool, typer.Option("--verbose", help="Explain the result.")] = False,
@@ -92,6 +95,8 @@ def next(
         available = service.next_available(port)
     except InvalidPortError as error:
         _fail(str(error), 2)
+    except PortNotFoundError as error:
+        _fail(str(error), 3)
     if verbose:
         console.print(f"Port {port} is {'available' if available == port else 'busy'}.")
         console.print(f"Next available port: {available}")
@@ -100,6 +105,7 @@ def next(
 
 
 @app.command()
+@report_system_errors
 def kill(
     port: Annotated[int, typer.Argument(help="Port whose process should be terminated.")],
     yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip confirmation.")] = False,
@@ -111,6 +117,7 @@ def kill(
 
 
 @app.command()
+@report_system_errors
 def free(
     port: Annotated[int, typer.Argument(help="Port to free.")],
     yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip confirmation.")] = False,
@@ -122,6 +129,7 @@ def free(
 
 
 @app.command()
+@report_system_errors
 def watch(
     interval: Annotated[
         float, typer.Option("--interval", min=0.2, help="Refresh interval in seconds.")
@@ -197,6 +205,12 @@ def _terminate_port(
     if item.pid is None:
         _fail("No process PID is available for this port.", 5)
     try:
+        current = service.inspect(port)
+    except PortNotFoundError:
+        _fail("The listener changed during confirmation. Inspect the port again.", 5)
+    if (current.pid, current.started_at) != (item.pid, item.started_at):
+        _fail("The listener changed during confirmation. Inspect the port again.", 5)
+    try:
         terminator.terminate(item.pid, force=force)
     except ProcessTerminationError as error:
         _fail(str(error), 5)
@@ -206,7 +220,7 @@ def _terminate_port(
     except PortNotFoundError:
         typer.echo(f"Port {port} is now available.")
         return
-    typer.echo(f"Port {port} is still in use.", err=True)
+    _fail(f"Port {port} is still in use.", 5)
 
 
 def _fail(message: str, code: int) -> NoReturn:

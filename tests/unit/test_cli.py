@@ -102,21 +102,21 @@ def test_kill_success_cancellation_and_still_busy(monkeypatch) -> None:
     runner = CliRunner()
     terminator = Mock()
     monkeypatch.setattr(cli.terminator, "terminate", terminator.terminate)
-    inspect = Mock(side_effect=[_item(), PortNotFoundError("available")])
+    inspect = Mock(side_effect=[_item(), _item(), PortNotFoundError("available")])
     monkeypatch.setattr(cli.service, "inspect", inspect)
 
     success = runner.invoke(app, ["kill", "3000", "--yes"])
-    inspect.side_effect = [_item(), _item()]
+    inspect.side_effect = [_item(), _item(), _item()]
     cancelled = runner.invoke(app, ["kill", "3000"], input="n\n")
 
     assert success.exit_code == 0
     assert "now available" in success.stdout
-    inspect.side_effect = [_item(), _item()]
+    inspect.side_effect = [_item(), _item(), _item()]
     assert cancelled.exit_code == 0
     assert "cancelled" in cancelled.stdout
 
     busy = runner.invoke(app, ["kill", "3000", "--yes"])
-    assert busy.exit_code == 0
+    assert busy.exit_code == 5
     assert "still in use" in busy.stderr
 
 
