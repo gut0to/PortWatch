@@ -19,6 +19,7 @@ from portwatch.system.termination import ProcessTerminator
 from portwatch.utils.ports import parse_port_range
 from portwatch.web.actions import StaleListenerError, terminate_listener
 from portwatch.web.assets import read_static_asset
+from portwatch.web.request_data import MAX_PORT, MAX_REQUEST_BYTES, single_port_parameter
 from portwatch.web.security import (
     LOOPBACK_HOST,
     SECURITY_HEADERS,
@@ -27,10 +28,6 @@ from portwatch.web.security import (
     expected_origin,
     new_session_token,
 )
-
-MAX_REQUEST_BYTES = 4096
-MAX_PORT = 65535
-
 
 class DashboardHTTPServer(ThreadingHTTPServer):
     """Carry the app services and per-run token into request handlers."""
@@ -99,8 +96,8 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
     def _list_ports(self, query: str) -> None:
         parameters = parse_qs(query, strict_parsing=False)
         try:
-            start = self._single_parameter(parameters, "start", "1")
-            end = self._single_parameter(parameters, "end", str(MAX_PORT))
+            start = single_port_parameter(parameters, "start", "1")
+            end = single_port_parameter(parameters, "end", str(MAX_PORT))
             port_range = parse_port_range(f"{start}-{end}")
             ports = self.server.service.list_ports(port_range)
         except (InvalidPortError, ValueError) as error:
@@ -198,13 +195,6 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             self.headers.get("Host", ""),
             self.server.server_port,
         )
-
-    @staticmethod
-    def _single_parameter(parameters: dict[str, list[str]], key: str, default: str) -> str:
-        values = parameters.get(key, [default])
-        if len(values) != 1 or not values[0].isdecimal():
-            raise ValueError(f"{key.title()} must be a single port number.")
-        return values[0]
 
     @staticmethod
     def _now_iso() -> str:
