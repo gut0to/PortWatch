@@ -26,9 +26,9 @@ class PortService:
 
     def inspect(self, port: int) -> PortInfo:
         validate_port(port)
-        for item in self.list_ports():
+        for item in self.scanner.list_listening_ports():
             if item.port == port:
-                return item
+                return self._enrich(item)
         raise PortNotFoundError(f"Port {port} is available.")
 
     def next_available(self, start: int) -> int:

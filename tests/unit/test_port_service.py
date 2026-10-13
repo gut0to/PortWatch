@@ -70,3 +70,15 @@ def test_range_does_not_resolve_excluded_processes():
     resolver.enrich.side_effect = lambda item: item
     PortService(scanner=scanner, resolver=resolver).list_ports(PortRange(3000, 3000))
     resolver.enrich.assert_called_once_with(included)
+
+
+def test_inspect_resolves_only_requested_listener():
+    scanner = Mock()
+    scanner.list_listening_ports.return_value = [
+        PortInfo(1, "tcp", "LISTENING"),
+        PortInfo(2, "tcp", "LISTENING"),
+    ]
+    resolver = Mock()
+    resolver.enrich.side_effect = lambda item: item
+    assert PortService(scanner=scanner, resolver=resolver).inspect(2).port == 2
+    assert resolver.enrich.call_count == 1
