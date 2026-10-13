@@ -36,3 +36,8 @@ def test_validate_port_rejects_non_integer_values(value):
 def test_range_rejects_non_ascii_digits(value):
     with pytest.raises(InvalidPortError):
         parse_port_range(value)
+
+
+def test_range_bounds_integer_conversion():
+    with pytest.raises(InvalidPortError):
+        parse_port_range("1-" + "9" * 5000)

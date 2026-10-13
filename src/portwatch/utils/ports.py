@@ -14,6 +14,8 @@ def parse_port_range(value: str) -> PortRange:
         (part.strip().isascii() and part.strip().isdecimal()) for part in parts
     ):
         raise InvalidPortError("Range must use the format START-END, for example 3000-9000.")
+    if any(len(part.strip()) > 5 for part in parts):
+        raise InvalidPortError("Port must be between 1 and 65535.")
     start, end = (int(part.strip()) for part in parts)
     validate_port(start)
     validate_port(end)
