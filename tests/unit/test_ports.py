@@ -24,3 +24,9 @@ def test_parse_port_range() -> None:
 def test_parse_port_range_rejects_invalid_values(value: str) -> None:
     with pytest.raises(InvalidPortError):
         parse_port_range(value)
+
+
+@pytest.mark.parametrize("value", [True, False, 3.5, "3000", None])
+def test_validate_port_rejects_non_integer_values(value):
+    with pytest.raises(InvalidPortError):
+        validate_port(value)
