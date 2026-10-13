@@ -71,8 +71,10 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         """Keep routine local requests out of the CLI output."""
 
     def _list_ports(self, query: str) -> None:
-        parameters = parse_qs(query, strict_parsing=False, keep_blank_values=True)
         try:
+            parameters = parse_qs(
+                query, strict_parsing=False, keep_blank_values=True, max_num_fields=16
+            )
             start = single_port_parameter(parameters, "start", "1")
             end = single_port_parameter(parameters, "end", str(MAX_PORT))
             port_range = parse_port_range(f"{start}-{end}")

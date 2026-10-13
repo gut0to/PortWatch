@@ -32,3 +32,14 @@ def test_empty_json_body_has_actionable_error():
     handler.rfile = BytesIO()
     with pytest.raises(ValueError, match="JSON request body is required"):
         handler._read_json_body()
+
+
+def test_oversized_query_returns_bad_request_without_scanning():
+    from unittest.mock import Mock
+
+    from portwatch.web.handler import DashboardRequestHandler
+
+    handler = object.__new__(DashboardRequestHandler)
+    handler._send_error = Mock()
+    handler._list_ports("&".join("start=1" for _ in range(17)))
+    assert handler._send_error.call_args.args[0] == 400
