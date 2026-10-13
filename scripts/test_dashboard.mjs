@@ -125,3 +125,14 @@ test("listener keys distinguish reused process IDs", async () => {
   const item = { port: 3000, pid: 42, process_name: "python" };
   assert.notEqual(view.listenerKey({ ...item, started_at: "2026-01-01" }), view.listenerKey({ ...item, started_at: "2026-01-02" }));
 });
+
+
+test("repeated confirmation submissions send one stop request", async () => {
+  const { nodes, requests } = await dashboard();
+  nodes.get("#terminate").listeners.click();
+  const submit = nodes.get("#confirm-form").listeners.submit;
+  submit({ preventDefault() {} });
+  submit({ preventDefault() {} });
+  await new Promise(setImmediate);
+  assert.equal(requests.filter(({ url }) => url.includes("terminate")).length, 1);
+});

@@ -15,6 +15,7 @@ const state = {
   ports: [],
   selectedListener: null,
   scanning: false,
+  terminating: false,
   pendingTermination: null,
 };
 
@@ -124,7 +125,8 @@ function openConfirmation() {
 
 async function terminateSelected() {
   const port = state.pendingTermination;
-  if (!port?.pid || !state.token) return;
+  if (!port?.pid || !state.token || state.terminating) return;
+  state.terminating = true;
   elements.confirmTerminate.disabled = true;
   elements.confirmTerminate.textContent = "Stopping…";
   try {
@@ -137,6 +139,7 @@ async function terminateSelected() {
     setNotice(error.message || "The process could not be stopped.", "error");
     if (error.message.includes("changed") || error.message.includes("available")) await scan();
   } finally {
+    state.terminating = false;
     elements.confirmTerminate.disabled = false;
     elements.confirmTerminate.textContent = "Stop process";
   }
