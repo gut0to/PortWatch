@@ -17,3 +17,13 @@ def single_port_parameter(parameters: dict[str, list[str]], key: str, default: s
     ):
         raise ValueError(f"{key.title()} must be a single port number.")
     return values[0]
+
+
+def unique_json_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    """Reject duplicate keys rather than silently changing action parameters."""
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"Duplicate JSON field: {key}.")
+        result[key] = value
+    return result

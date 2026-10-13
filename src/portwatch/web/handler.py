@@ -14,7 +14,12 @@ from portwatch.presentation.serializers import port_to_dict
 from portwatch.utils.ports import parse_port_range
 from portwatch.web.actions import StaleListenerError, terminate_listener
 from portwatch.web.assets import read_static_asset
-from portwatch.web.request_data import MAX_PORT, MAX_REQUEST_BYTES, single_port_parameter
+from portwatch.web.request_data import (
+    MAX_PORT,
+    MAX_REQUEST_BYTES,
+    single_port_parameter,
+    unique_json_object,
+)
 from portwatch.web.security import (
     SECURITY_HEADERS,
     compare_session_token,
@@ -123,7 +128,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         length = int(raw_length)
         if length > MAX_REQUEST_BYTES:
             raise ValueError("The request is too large.")
-        data = json.loads(self.rfile.read(length))
+        data = json.loads(self.rfile.read(length), object_pairs_hook=unique_json_object)
         if not isinstance(data, dict):
             raise ValueError("The request body must be a JSON object.")
         return cast(dict[str, object], data)
