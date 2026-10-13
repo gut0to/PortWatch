@@ -1,4 +1,5 @@
 import json
+import math
 import time
 import webbrowser
 from collections.abc import Callable
@@ -181,6 +182,8 @@ def watch(
         str | None, typer.Option("--range", help="Filter ports, e.g. 3000-9000.")
     ] = None,
 ) -> None:
+    if not math.isfinite(interval):
+        _fail("Refresh interval must be finite.", 2)
     try:
         parsed_range = parse_port_range(port_range) if port_range else None
     except InvalidPortError as error:

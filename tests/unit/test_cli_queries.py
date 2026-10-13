@@ -79,3 +79,9 @@ def test_version_skips_requested_subcommand(monkeypatch):
     assert result.exit_code == 0
     assert "PortWatch" in result.stdout
     scan.assert_not_called()
+
+
+@pytest.mark.parametrize("interval", ["nan", "inf"])
+def test_watch_rejects_nonfinite_intervals(interval):
+    result = CliRunner().invoke(cli.app, ["watch", "--interval", interval])
+    assert result.exit_code == 2
