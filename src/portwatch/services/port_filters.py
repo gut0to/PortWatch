@@ -4,7 +4,12 @@ from portwatch.domain.models import PortInfo
 
 
 def filter_ports(
-    ports: list[PortInfo], query: str = "", *, pid: int | None = None, process: str = ""
+    ports: list[PortInfo],
+    query: str = "",
+    *,
+    pid: int | None = None,
+    process: str = "",
+    project: str = "",
 ) -> list[PortInfo]:
     ports = [item for item in ports if pid is None or item.pid == pid]
     if process.strip():
@@ -12,6 +17,12 @@ def filter_ports(
             item
             for item in ports
             if process.strip().casefold() in (item.process_name or "").casefold()
+        ]
+    if project.strip():
+        ports = [
+            item
+            for item in ports
+            if project.strip().casefold() in (item.project_name or "").casefold()
         ]
     needle = query.strip().casefold()
     return [

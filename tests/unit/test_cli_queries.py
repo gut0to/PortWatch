@@ -32,3 +32,8 @@ def test_list_pid_filter(listeners):
 def test_list_process_filter(listeners):
     result = CliRunner().invoke(cli.app, ["list", "--process", "py", "--json"])
     assert [item["pid"] for item in json.loads(result.stdout)] == [10]
+
+
+def test_list_project_filters_combine(listeners):
+    result = CliRunner().invoke(cli.app, ["list", "--project", "front", "--pid", "10", "--json"])
+    assert json.loads(result.stdout) == []
