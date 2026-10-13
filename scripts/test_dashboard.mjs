@@ -4,7 +4,7 @@ import test from "node:test";
 import vm from "node:vm";
 
 // Execute the actual ES modules with a small DOM seam; no browser is required.
-async function dashboard() {
+async function dashboard(options = {}) {
   const nodes = new Map();
   class Node {
     constructor() {
@@ -35,12 +35,17 @@ async function dashboard() {
   };
   document.querySelector("#range-start").value = "1";
   document.querySelector("#range-end").value = "65535";
+  const configuration = options;
   const requests = [];
   let ports = [{ port: 3000, pid: 42, process_name: "python", protocol: "tcp", status: "LISTENING" }];
   const context = vm.createContext({
     document, HTMLElement: Node, console,
     fetch: async (url, options) => {
       requests.push({ url, options });
+      if (configuration.respond) {
+        const response = await configuration.respond(url, options);
+        if (response) return response;
+      }
       const data = url === "/api/session"
         ? { token: "a".repeat(43) }
         : url.includes("terminate") ? { message: "Stopped." }
@@ -60,7 +65,7 @@ async function dashboard() {
   await root.link((specifier) => load(specifier.replace("./", "")));
   await root.evaluate();
   await new Promise(setImmediate);
-  return { nodes, requests, setPorts(value) { ports = value; } };
+  return { nodes, requests, api: modules.get("dashboard-api.js").namespace, view: modules.get("dashboard-view.js").namespace, setPorts(value) { ports = value; } };
 }
 
 test("confirmation opens for the selected listener and submits its PID", async () => {
@@ -85,4 +90,13 @@ test("confirmation retains its displayed listener when a scan changes selection"
   const request = requests.find(({ url }) => url.includes("terminate"));
   assert.equal(request.url, "/api/ports/3000/terminate");
   assert.deepEqual(JSON.parse(request.options.body), { pid: 42, started_at: null });
+});
+
+
+test("action requests preserve both JSON accept and authorization headers", async () => {
+  const { api, requests } = await dashboard();
+  await api.terminatePort({ port: 3000, pid: 42 }, "token");
+  const headers = requests.at(-1).options.headers;
+  assert.equal(headers.Accept, "application/json");
+  assert.equal(headers["X-PortWatch-Token"], "token");
 });

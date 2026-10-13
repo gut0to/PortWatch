@@ -3,8 +3,8 @@
 export async function getJson(url, options = {}) {
   const response = await fetch(url, {
     cache: "no-store",
-    headers: { Accept: "application/json", ...options.headers },
     ...options,
+    headers: { Accept: "application/json", ...options.headers },
   });
   let data;
   try {
