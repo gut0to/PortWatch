@@ -19,10 +19,10 @@ class PortService:
         self.project_detector = project_detector or ProjectDetector()
 
     def list_ports(self, port_range: PortRange | None = None) -> list[PortInfo]:
-        ports = [self._enrich(item) for item in self.scanner.list_listening_ports()]
-        if port_range is None:
-            return ports
-        return [item for item in ports if port_range.start <= item.port <= port_range.end]
+        ports = self.scanner.list_listening_ports()
+        if port_range is not None:
+            ports = [item for item in ports if port_range.start <= item.port <= port_range.end]
+        return [self._enrich(item) for item in ports]
 
     def inspect(self, port: int) -> PortInfo:
         validate_port(port)
