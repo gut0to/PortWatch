@@ -172,3 +172,23 @@ test("termination confirmation stays closed while a scan is pending", async () =
   resolveScan({ ok: true, json: async () => ({ ports: [], scanned_at: "2026-01-01" }) });
   await pending;
 });
+
+test("stale termination refreshes listeners and retains the conflict explanation", async () => {
+  const { nodes, requests } = await dashboard({ respond(url) {
+    if (url.includes("terminate")) return {
+      ok: false, status: 409, json: async () => ({ error: "Listener identity no longer matches." }),
+    };
+  }});
+  nodes.get("#terminate").listeners.click();
+  nodes.get("#confirm-form").listeners.submit({ preventDefault() {} });
+  await new Promise(setImmediate);
+  assert.equal(requests.filter(({ url }) => url.startsWith("/api/ports?")).length, 2);
+  assert.equal(nodes.get("#notice").textContent, "Listener identity no longer matches.");
+});
+
+test("HTTP errors with null JSON bodies still explain their status", async () => {
+  const { api } = await dashboard({ respond(url) {
+    if (url === "/failure") return { ok: false, status: 503, json: async () => null };
+  }});
+  await assert.rejects(api.getJson("/failure"), /Request failed \(503\)/);
+});

@@ -145,8 +145,8 @@ async function terminateSelected() {
     }
   } catch (error) {
     elements.dialog.close();
+    if (error.status === 409) await scan();
     setNotice(error.message || "The process could not be stopped.", "error");
-    if (error.message.includes("changed") || error.message.includes("available")) await scan();
   } finally {
     state.terminating = false;
     elements.confirmTerminate.disabled = false;

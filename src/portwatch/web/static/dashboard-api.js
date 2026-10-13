@@ -12,7 +12,12 @@ export async function getJson(url, options = {}) {
   } catch {
     throw new Error("The local dashboard returned an unreadable response.");
   }
-  if (!response.ok) throw new Error(data.error || `Request failed (${response.status}).`);
+  if (!response.ok) {
+    const message = typeof data?.error === "string" ? data.error : `Request failed (${response.status}).`;
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
+  }
   return data;
 }
 
