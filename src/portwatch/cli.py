@@ -17,7 +17,7 @@ from portwatch.domain.exceptions import (
 from portwatch.domain.models import PortInfo
 from portwatch.presentation.console import format_port_count, print_inspection
 from portwatch.presentation.errors import report_system_errors
-from portwatch.presentation.serializers import port_to_dict, ports_to_json
+from portwatch.presentation.serializers import port_to_dict, ports_to_csv, ports_to_json
 from portwatch.presentation.tables import ports_table, watch_view
 from portwatch.services.port_filters import filter_ports
 from portwatch.services.port_service import PortService
@@ -59,6 +59,7 @@ def main(
 @app.command("list")
 @report_system_errors
 def list_ports(
+    as_csv: Annotated[bool, typer.Option("--csv", help="Print a CSV snapshot.")] = False,
     descending: Annotated[
         bool, typer.Option("--descending", help="Reverse the sort order.")
     ] = False,
@@ -74,6 +75,8 @@ def list_ports(
     ] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Print machine-readable JSON.")] = False,
 ) -> None:
+    if as_csv and as_json:
+        _fail("Choose either --json or --csv.", 2)
     try:
         parsed_range = parse_port_range(port_range) if port_range else None
         ports = filter_ports(
@@ -88,7 +91,9 @@ def list_ports(
         SortField.project: lambda item: (item.project_name or "").casefold(),
     }
     ports = sorted(ports, key=keys[sort], reverse=descending)
-    if as_json:
+    if as_csv:
+        typer.echo(ports_to_csv(ports))
+    elif as_json:
         typer.echo(ports_to_json(ports))
     else:
         if ports:

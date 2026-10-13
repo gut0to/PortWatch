@@ -48,3 +48,10 @@ def test_list_sort_by_process(listeners):
 def test_list_descending_sort(listeners):
     result = CliRunner().invoke(cli.app, ["list", "--descending", "--json"])
     assert [item["port"] for item in json.loads(result.stdout)] == [4000, 3000]
+
+
+def test_list_csv_and_conflicting_formats(listeners):
+    result = CliRunner().invoke(cli.app, ["list", "--csv", "--pid", "10"])
+    assert result.exit_code == 0
+    assert "3000,tcp,LISTENING,10,Python" in result.stdout
+    assert CliRunner().invoke(cli.app, ["list", "--json", "--csv"]).exit_code == 2
