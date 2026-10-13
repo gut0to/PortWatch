@@ -27,3 +27,8 @@ def test_list_pid_filter(listeners):
     result = CliRunner().invoke(cli.app, ["list", "--pid", "20", "--json"])
     assert [item["port"] for item in json.loads(result.stdout)] == [4000]
     assert CliRunner().invoke(cli.app, ["list", "--pid", "0"]).exit_code == 2
+
+
+def test_list_process_filter(listeners):
+    result = CliRunner().invoke(cli.app, ["list", "--process", "py", "--json"])
+    assert [item["pid"] for item in json.loads(result.stdout)] == [10]

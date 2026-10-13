@@ -49,6 +49,7 @@ def main(
 @report_system_errors
 def list_ports(
     pid: Annotated[int | None, typer.Option("--pid", min=1, help="Filter by process ID.")] = None,
+    process: Annotated[str, typer.Option("--process", help="Filter process names.")] = "",
     search: Annotated[str, typer.Option("--search", help="Search listener metadata.")] = "",
     port_range: Annotated[
         str | None, typer.Option("--range", help="Filter ports, e.g. 3000-9000.")
@@ -57,7 +58,7 @@ def list_ports(
 ) -> None:
     try:
         parsed_range = parse_port_range(port_range) if port_range else None
-        ports = filter_ports(service.list_ports(parsed_range), search, pid=pid)
+        ports = filter_ports(service.list_ports(parsed_range), search, pid=pid, process=process)
     except InvalidPortError as error:
         _fail(str(error), 2)
     if as_json:
