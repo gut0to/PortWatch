@@ -55,3 +55,9 @@ def test_list_csv_and_conflicting_formats(listeners):
     assert result.exit_code == 0
     assert "3000,tcp,LISTENING,10,Python" in result.stdout
     assert CliRunner().invoke(cli.app, ["list", "--json", "--csv"]).exit_code == 2
+
+
+def test_next_json(monkeypatch):
+    monkeypatch.setattr(cli.service, "next_available", lambda port: port + 1)
+    result = CliRunner().invoke(cli.app, ["next", "3000", "--json", "--verbose"])
+    assert json.loads(result.stdout) == {"start": 3000, "port": 3001, "available": False}

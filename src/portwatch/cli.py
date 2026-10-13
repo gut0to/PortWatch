@@ -125,6 +125,7 @@ def inspect(
 @report_system_errors
 def next(
     port: Annotated[int, typer.Argument(help="Starting port.")],
+    as_json: Annotated[bool, typer.Option("--json", help="Print machine-readable JSON.")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", help="Explain the result.")] = False,
 ) -> None:
     try:
@@ -133,7 +134,9 @@ def next(
         _fail(str(error), 2)
     except PortNotFoundError as error:
         _fail(str(error), 3)
-    if verbose:
+    if as_json:
+        typer.echo(json.dumps({"start": port, "port": available, "available": available == port}))
+    elif verbose:
         console.print(f"Port {port} is {'available' if available == port else 'busy'}.")
         console.print(f"Next available port: {available}")
     else:
