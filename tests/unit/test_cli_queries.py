@@ -43,3 +43,8 @@ def test_list_sort_by_process(listeners):
     result = CliRunner().invoke(cli.app, ["list", "--sort", "process", "--json"])
     assert [item["port"] for item in json.loads(result.stdout)] == [4000, 3000]
     assert CliRunner().invoke(cli.app, ["list", "--sort", "bad"]).exit_code == 2
+
+
+def test_list_descending_sort(listeners):
+    result = CliRunner().invoke(cli.app, ["list", "--descending", "--json"])
+    assert [item["port"] for item in json.loads(result.stdout)] == [4000, 3000]

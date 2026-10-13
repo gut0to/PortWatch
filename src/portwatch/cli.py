@@ -59,6 +59,9 @@ def main(
 @app.command("list")
 @report_system_errors
 def list_ports(
+    descending: Annotated[
+        bool, typer.Option("--descending", help="Reverse the sort order.")
+    ] = False,
     sort: Annotated[
         SortField, typer.Option("--sort", help="Sort results by a field.")
     ] = SortField.port,
@@ -84,7 +87,7 @@ def list_ports(
         SortField.process: lambda item: (item.process_name or "").casefold(),
         SortField.project: lambda item: (item.project_name or "").casefold(),
     }
-    ports = sorted(ports, key=keys[sort])
+    ports = sorted(ports, key=keys[sort], reverse=descending)
     if as_json:
         typer.echo(ports_to_json(ports))
     else:
