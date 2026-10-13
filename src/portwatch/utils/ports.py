@@ -10,7 +10,9 @@ def validate_port(port: int) -> int:
 
 def parse_port_range(value: str) -> PortRange:
     parts = value.split("-", maxsplit=1)
-    if len(parts) != 2 or not all(part.strip().isdigit() for part in parts):
+    if len(parts) != 2 or not all(
+        (part.strip().isascii() and part.strip().isdecimal()) for part in parts
+    ):
         raise InvalidPortError("Range must use the format START-END, for example 3000-9000.")
     start, end = (int(part.strip()) for part in parts)
     validate_port(start)
