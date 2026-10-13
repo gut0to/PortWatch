@@ -48,7 +48,7 @@ export function element(tag, className, text) {
 }
 
 export function listenerKey(port) {
-  return `${port.port}:${port.pid ?? "unknown"}:${port.process_name ?? ""}`;
+  return `${port.port}:${port.pid ?? "unknown"}:${port.process_name ?? ""}:${port.started_at ?? ""}`;
 }
 
 export function icon(name) {

@@ -60,3 +60,33 @@ def test_inspect_returns_matching_port_and_reports_available_port() -> None:
     assert service.inspect(3000).port == 3000
     with pytest.raises(PortNotFoundError):
         service.inspect(3001)
+
+
+def test_range_does_not_resolve_excluded_processes():
+    scanner = Mock()
+    included = PortInfo(3000, "tcp", "LISTENING")
+    scanner.list_listening_ports.return_value = [included, PortInfo(9000, "tcp", "LISTENING")]
+    resolver = Mock()
+    resolver.enrich.side_effect = lambda item: item
+    PortService(scanner=scanner, resolver=resolver).list_ports(PortRange(3000, 3000))
+    resolver.enrich.assert_called_once_with(included)
+
+
+def test_inspect_resolves_only_requested_listener():
+    scanner = Mock()
+    scanner.list_listening_ports.return_value = [
+        PortInfo(1, "tcp", "LISTENING"),
+        PortInfo(2, "tcp", "LISTENING"),
+    ]
+    resolver = Mock()
+    resolver.enrich.side_effect = lambda item: item
+    assert PortService(scanner=scanner, resolver=resolver).inspect(2).port == 2
+    assert resolver.enrich.call_count == 1
+
+
+def test_next_available_never_reads_process_metadata():
+    scanner = Mock()
+    scanner.list_listening_ports.return_value = []
+    resolver = Mock()
+    assert PortService(scanner=scanner, resolver=resolver).next_available(3000) == 3000
+    resolver.enrich.assert_not_called()

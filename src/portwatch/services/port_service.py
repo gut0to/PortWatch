@@ -19,21 +19,21 @@ class PortService:
         self.project_detector = project_detector or ProjectDetector()
 
     def list_ports(self, port_range: PortRange | None = None) -> list[PortInfo]:
-        ports = [self._enrich(item) for item in self.scanner.list_listening_ports()]
-        if port_range is None:
-            return ports
-        return [item for item in ports if port_range.start <= item.port <= port_range.end]
+        ports = self.scanner.list_listening_ports()
+        if port_range is not None:
+            ports = [item for item in ports if port_range.start <= item.port <= port_range.end]
+        return [self._enrich(item) for item in ports]
 
     def inspect(self, port: int) -> PortInfo:
         validate_port(port)
-        for item in self.list_ports():
+        for item in self.scanner.list_listening_ports():
             if item.port == port:
-                return item
+                return self._enrich(item)
         raise PortNotFoundError(f"Port {port} is available.")
 
     def next_available(self, start: int) -> int:
         validate_port(start)
-        occupied = {item.port for item in self.list_ports()}
+        occupied = {item.port for item in self.scanner.list_listening_ports()}
         for port in range(start, 65536):
             if port not in occupied:
                 return port

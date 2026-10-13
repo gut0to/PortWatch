@@ -15,10 +15,16 @@ def terminate_listener(
     terminator: ProcessTerminator,
     port: int,
     pid: int,
+    started_at: str | None = None,
 ) -> str:
     """Recheck the port/PID pair immediately before requesting process exit."""
     current_ports = service.list_ports()
-    if any(item.port == port and item.pid == pid for item in current_ports):
+    if any(
+        item.port == port
+        and item.pid == pid
+        and (item.started_at.isoformat() if item.started_at else None) == started_at
+        for item in current_ports
+    ):
         terminator.terminate(pid)
         return f"Process {pid} was asked to stop."
 

@@ -1,6 +1,9 @@
 import json
+import math
 import time
 import webbrowser
+from collections.abc import Callable
+from enum import StrEnum
 from typing import Annotated, NoReturn
 
 import typer
@@ -12,14 +15,24 @@ from portwatch.domain.exceptions import (
     PortNotFoundError,
     ProcessTerminationError,
 )
+from portwatch.domain.models import PortInfo
 from portwatch.presentation.console import format_port_count, print_inspection
 from portwatch.presentation.errors import report_system_errors
-from portwatch.presentation.serializers import port_to_dict, ports_to_json
+from portwatch.presentation.serializers import port_to_dict, ports_to_csv, ports_to_json
 from portwatch.presentation.tables import ports_table, watch_view
+from portwatch.services.port_filters import filter_ports
 from portwatch.services.port_service import PortService
 from portwatch.system.termination import ProcessTerminator
 from portwatch.utils.ports import parse_port_range, validate_port
 from portwatch.web.server import create_server
+
+
+class SortField(StrEnum):
+    port = "port"
+    pid = "pid"
+    process = "process"
+    project = "project"
+
 
 app = typer.Typer(
     name="portwatch",
@@ -40,6 +53,7 @@ def main(
         from portwatch import __version__
 
         typer.echo(f"PortWatch {__version__}")
+        raise typer.Exit()
     elif ctx.invoked_subcommand is None:
         list_ports()
 
@@ -47,17 +61,41 @@ def main(
 @app.command("list")
 @report_system_errors
 def list_ports(
+    as_csv: Annotated[bool, typer.Option("--csv", help="Print a CSV snapshot.")] = False,
+    descending: Annotated[
+        bool, typer.Option("--descending", help="Reverse the sort order.")
+    ] = False,
+    sort: Annotated[
+        SortField, typer.Option("--sort", help="Sort results by a field.")
+    ] = SortField.port,
+    pid: Annotated[int | None, typer.Option("--pid", min=1, help="Filter by process ID.")] = None,
+    process: Annotated[str, typer.Option("--process", help="Filter process names.")] = "",
+    project: Annotated[str, typer.Option("--project", help="Filter detected project names.")] = "",
+    search: Annotated[str, typer.Option("--search", help="Search listener metadata.")] = "",
     port_range: Annotated[
         str | None, typer.Option("--range", help="Filter ports, e.g. 3000-9000.")
     ] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Print machine-readable JSON.")] = False,
 ) -> None:
+    if as_csv and as_json:
+        _fail("Choose either --json or --csv.", 2)
     try:
         parsed_range = parse_port_range(port_range) if port_range else None
-        ports = service.list_ports(parsed_range)
+        ports = filter_ports(
+            service.list_ports(parsed_range), search, pid=pid, process=process, project=project
+        )
     except InvalidPortError as error:
         _fail(str(error), 2)
-    if as_json:
+    keys: dict[SortField, Callable[[PortInfo], int | str]] = {
+        SortField.port: lambda item: item.port,
+        SortField.pid: lambda item: item.pid or 0,
+        SortField.process: lambda item: (item.process_name or "").casefold(),
+        SortField.project: lambda item: (item.project_name or "").casefold(),
+    }
+    ports = sorted(ports, key=keys[sort], reverse=descending)
+    if as_csv:
+        typer.echo(ports_to_csv(ports))
+    elif as_json:
         typer.echo(ports_to_json(ports))
     else:
         if ports:
@@ -89,6 +127,7 @@ def inspect(
 @report_system_errors
 def next(
     port: Annotated[int, typer.Argument(help="Starting port.")],
+    as_json: Annotated[bool, typer.Option("--json", help="Print machine-readable JSON.")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", help="Explain the result.")] = False,
 ) -> None:
     try:
@@ -97,7 +136,9 @@ def next(
         _fail(str(error), 2)
     except PortNotFoundError as error:
         _fail(str(error), 3)
-    if verbose:
+    if as_json:
+        typer.echo(json.dumps({"start": port, "port": available, "available": available == port}))
+    elif verbose:
         console.print(f"Port {port} is {'available' if available == port else 'busy'}.")
         console.print(f"Next available port: {available}")
     else:
@@ -131,6 +172,9 @@ def free(
 @app.command()
 @report_system_errors
 def watch(
+    count: Annotated[
+        int, typer.Option("--count", min=0, help="Stop after N scans; 0 watches forever.")
+    ] = 0,
     interval: Annotated[
         float, typer.Option("--interval", min=0.2, help="Refresh interval in seconds.")
     ] = 2.0,
@@ -138,15 +182,21 @@ def watch(
         str | None, typer.Option("--range", help="Filter ports, e.g. 3000-9000.")
     ] = None,
 ) -> None:
+    if not math.isfinite(interval):
+        _fail("Refresh interval must be finite.", 2)
     try:
         parsed_range = parse_port_range(port_range) if port_range else None
     except InvalidPortError as error:
         _fail(str(error), 2)
     try:
         with Live(console=console, refresh_per_second=max(1, int(1 / interval))) as live:
+            scans = 0
             while True:
                 ports = service.list_ports(parsed_range)
                 live.update(watch_view(ports, interval))
+                scans += 1
+                if count and scans >= count:
+                    break
                 time.sleep(interval)
     except KeyboardInterrupt:
         return

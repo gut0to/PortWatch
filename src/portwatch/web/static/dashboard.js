@@ -15,6 +15,7 @@ const state = {
   ports: [],
   selectedListener: null,
   scanning: false,
+  terminating: false,
   pendingTermination: null,
 };
 
@@ -39,6 +40,13 @@ async function scan() {
   setNotice("");
 
   try {
+    if (!state.token) {
+      const session = await getJson("/api/session");
+      if (typeof session?.token !== "string" || session.token.length < 32) {
+        throw new Error("The local action token could not be created.");
+      }
+      state.token = session.token;
+    }
     const result = await fetchPorts(range);
     state.ports = Array.isArray(result.ports) ? result.ports : [];
     state.ports.sort((left, right) => left.port - right.port);
@@ -114,7 +122,7 @@ async function copyValue(value, label) {
 
 function openConfirmation() {
   const port = state.ports.find((item) => listenerKey(item) === state.selectedListener);
-  if (!port?.pid) return;
+  if (!port?.pid || !state.token || state.scanning || state.terminating) return;
   state.pendingTermination = { ...port };
   elements.confirmProcess.textContent = port.process_name || "Unknown process";
   elements.confirmPid.textContent = String(port.pid);
@@ -124,19 +132,23 @@ function openConfirmation() {
 
 async function terminateSelected() {
   const port = state.pendingTermination;
-  if (!port?.pid || !state.token) return;
+  if (!port?.pid || !state.token || state.terminating) return;
+  state.terminating = true;
   elements.confirmTerminate.disabled = true;
   elements.confirmTerminate.textContent = "Stopping…";
   try {
     const result = await terminatePort(port, state.token);
     elements.dialog.close();
-    setNotice(result.message || "Termination request sent.", "success");
     await scan();
+    if (elements.connection.dataset.state !== "error") {
+      setNotice(result.message || "Termination request sent.", "success");
+    }
   } catch (error) {
     elements.dialog.close();
+    if (error.status === 409) await scan();
     setNotice(error.message || "The process could not be stopped.", "error");
-    if (error.message.includes("changed") || error.message.includes("available")) await scan();
   } finally {
+    state.terminating = false;
     elements.confirmTerminate.disabled = false;
     elements.confirmTerminate.textContent = "Stop process";
   }

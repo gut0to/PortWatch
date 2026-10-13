@@ -397,6 +397,21 @@ def test_post_rejects_invalid_pid(
     assert payload == {"error": "A valid process ID is required."}
 
 
+@pytest.mark.parametrize("body", [b'{"pid":42,"started_at":123}', b'{"pid":42,"pid":99}', b""])
+def test_post_rejects_ambiguous_identity_without_termination(running_dashboard, body):
+    server, _, terminator = running_dashboard
+    status, payload, _ = request(
+        server,
+        "POST",
+        "/api/ports/3000/terminate",
+        body=body,
+        headers={**post_headers(server), "Content-Type": "application/json"},
+    )
+    assert status == 400
+    assert "error" in payload
+    assert terminator.pids == []
+
+
 def test_post_terminates_only_the_confirmed_current_listener(
     running_dashboard: tuple[DashboardHTTPServer, FakePortService, FakeTerminator],
 ) -> None:

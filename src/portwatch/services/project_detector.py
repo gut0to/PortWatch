@@ -7,6 +7,12 @@ PROJECT_MARKERS = (
     "go.mod",
     "pom.xml",
     "build.gradle",
+    "build.gradle.kts",
+    "settings.gradle.kts",
+    "deno.json",
+    "deno.jsonc",
+    "CMakeLists.txt",
+    "Makefile",
     "composer.json",
     "Gemfile",
     "docker-compose.yml",
@@ -26,7 +32,11 @@ class ProjectDetector:
             if not current.is_dir():
                 return None
             for directory in (current, *current.parents):
-                if any((directory / marker).exists() for marker in PROJECT_MARKERS):
+                if any((directory / marker).exists() for marker in PROJECT_MARKERS) or any(
+                    path.is_file()
+                    for pattern in ("*.csproj", "*.fsproj", "*.sln", "*.slnx")
+                    for path in directory.glob(pattern)
+                ):
                     return directory.name or str(directory)
         except OSError:
             return None

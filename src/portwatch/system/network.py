@@ -43,7 +43,7 @@ class PsutilNetworkScanner:
     @staticmethod
     def _connections() -> Iterable[ConnectionRecord]:
         try:
-            return cast(Iterable[ConnectionRecord], psutil.net_connections(kind="inet"))
+            return cast(Iterable[ConnectionRecord], psutil.net_connections(kind="tcp"))
         except psutil.AccessDenied as error:
             raise PermissionDeniedError(
                 "Insufficient permission to scan TCP listeners. Try an elevated terminal."
@@ -52,8 +52,8 @@ class PsutilNetworkScanner:
     @staticmethod
     def _port_from_address(address: object) -> int | None:
         port = getattr(address, "port", None)
-        if port is not None:
-            return int(port)
-        if isinstance(address, tuple) and len(address) >= 2:
-            return int(address[1])
-        return None
+        if port is None and isinstance(address, tuple) and len(address) >= 2:
+            port = address[1]
+        if isinstance(port, bool) or not isinstance(port, int) or not 1 <= port <= 65535:
+            return None
+        return port

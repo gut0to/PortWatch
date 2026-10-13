@@ -14,7 +14,12 @@ from portwatch.presentation.serializers import port_to_dict
 from portwatch.utils.ports import parse_port_range
 from portwatch.web.actions import StaleListenerError, terminate_listener
 from portwatch.web.assets import read_static_asset
-from portwatch.web.request_data import MAX_PORT, MAX_REQUEST_BYTES, single_port_parameter
+from portwatch.web.request_data import (
+    MAX_PORT,
+    MAX_REQUEST_BYTES,
+    single_port_parameter,
+    unique_json_object,
+)
 from portwatch.web.security import (
     SECURITY_HEADERS,
     compare_session_token,
@@ -32,6 +37,10 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
     server: DashboardHTTPServer
     server_version = "PortWatch"
     sys_version = ""
+
+    def setup(self) -> None:
+        self.request.settimeout(10)
+        super().setup()
 
     def do_GET(self) -> None:
         if not self._has_expected_host():
@@ -66,8 +75,10 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         """Keep routine local requests out of the CLI output."""
 
     def _list_ports(self, query: str) -> None:
-        parameters = parse_qs(query, strict_parsing=False, keep_blank_values=True)
         try:
+            parameters = parse_qs(
+                query, strict_parsing=False, keep_blank_values=True, max_num_fields=16
+            )
             start = single_port_parameter(parameters, "start", "1")
             end = single_port_parameter(parameters, "end", str(MAX_PORT))
             port_range = parse_port_range(f"{start}-{end}")
@@ -93,15 +104,20 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             if not 1 <= port <= MAX_PORT:
                 raise ValueError("Port must be between 1 and 65535.")
             payload = self._read_json_body()
+            started_at = payload.get("started_at")
+            if started_at is not None and not isinstance(started_at, str):
+                raise ValueError("Process start time must be a string or null.")
             pid = payload.get("pid")
             if not isinstance(pid, int) or isinstance(pid, bool) or pid <= 0:
                 raise ValueError("A valid process ID is required.")
-        except (ValueError, UnicodeDecodeError) as error:
+        except (ValueError, UnicodeDecodeError, TimeoutError) as error:
             self._send_error(HTTPStatus.BAD_REQUEST, str(error))
             return
 
         try:
-            message = terminate_listener(self.server.service, self.server.terminator, port, pid)
+            message = terminate_listener(
+                self.server.service, self.server.terminator, port, pid, started_at
+            )
         except StaleListenerError as error:
             self._send_error(HTTPStatus.CONFLICT, str(error))
             return
@@ -121,9 +137,11 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         if not raw_length.isdecimal():
             raise ValueError("A JSON request body is required.")
         length = int(raw_length)
+        if length == 0:
+            raise ValueError("A JSON request body is required.")
         if length > MAX_REQUEST_BYTES:
             raise ValueError("The request is too large.")
-        data = json.loads(self.rfile.read(length))
+        data = json.loads(self.rfile.read(length), object_pairs_hook=unique_json_object)
         if not isinstance(data, dict):
             raise ValueError("The request body must be a JSON object.")
         return cast(dict[str, object], data)
