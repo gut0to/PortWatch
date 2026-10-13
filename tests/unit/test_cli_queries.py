@@ -1,4 +1,5 @@
 import json
+from unittest.mock import Mock
 
 import pytest
 from typer.testing import CliRunner
@@ -61,3 +62,11 @@ def test_next_json(monkeypatch):
     monkeypatch.setattr(cli.service, "next_available", lambda port: port + 1)
     result = CliRunner().invoke(cli.app, ["next", "3000", "--json", "--verbose"])
     assert json.loads(result.stdout) == {"start": 3000, "port": 3001, "available": False}
+
+
+def test_watch_count_stops_without_sleeping(listeners, monkeypatch):
+    sleep = Mock()
+    monkeypatch.setattr(cli.time, "sleep", sleep)
+    result = CliRunner().invoke(cli.app, ["watch", "--count", "1"])
+    assert result.exit_code == 0
+    sleep.assert_not_called()

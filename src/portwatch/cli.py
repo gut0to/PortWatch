@@ -170,6 +170,9 @@ def free(
 @app.command()
 @report_system_errors
 def watch(
+    count: Annotated[
+        int, typer.Option("--count", min=0, help="Stop after N scans; 0 watches forever.")
+    ] = 0,
     interval: Annotated[
         float, typer.Option("--interval", min=0.2, help="Refresh interval in seconds.")
     ] = 2.0,
@@ -183,9 +186,13 @@ def watch(
         _fail(str(error), 2)
     try:
         with Live(console=console, refresh_per_second=max(1, int(1 / interval))) as live:
+            scans = 0
             while True:
                 ports = service.list_ports(parsed_range)
                 live.update(watch_view(ports, interval))
+                scans += 1
+                if count and scans >= count:
+                    break
                 time.sleep(interval)
     except KeyboardInterrupt:
         return
