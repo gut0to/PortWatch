@@ -56,3 +56,22 @@ def test_request_setup_limits_idle_socket_reads(monkeypatch):
     monkeypatch.setattr(BaseHTTPRequestHandler, "setup", lambda self: None)
     handler.setup()
     handler.request.settimeout.assert_called_once_with(10)
+
+
+def test_termination_rejects_reused_pid_and_requires_start_time():
+    from datetime import datetime
+    from unittest.mock import Mock
+
+    from portwatch.domain.models import PortInfo
+    from portwatch.web.actions import StaleListenerError, terminate_listener
+
+    service = Mock()
+    item = PortInfo(3000, "tcp", "LISTENING", pid=42, started_at=datetime(2026, 1, 1))
+    service.list_ports.return_value = [item]
+    terminator = Mock()
+    for timestamp in (None, "2025-01-01T00:00:00"):
+        with pytest.raises(StaleListenerError):
+            terminate_listener(service, terminator, 3000, 42, timestamp)
+    terminator.terminate.assert_not_called()
+    terminate_listener(service, terminator, 3000, 42, item.started_at.isoformat())
+    terminator.terminate.assert_called_once_with(42)

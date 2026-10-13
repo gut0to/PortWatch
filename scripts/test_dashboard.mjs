@@ -71,7 +71,7 @@ test("confirmation opens for the selected listener and submits its PID", async (
   nodes.get("#confirm-form").listeners.submit({ preventDefault() {} });
   await new Promise(setImmediate);
   const request = requests.find(({ url }) => url.includes("terminate"));
-  assert.deepEqual(JSON.parse(request.options.body), { pid: 42 });
+  assert.deepEqual(JSON.parse(request.options.body), { pid: 42, started_at: null });
 });
 
 test("confirmation retains its displayed listener when a scan changes selection", async () => {
@@ -84,5 +84,5 @@ test("confirmation retains its displayed listener when a scan changes selection"
   await new Promise(setImmediate);
   const request = requests.find(({ url }) => url.includes("terminate"));
   assert.equal(request.url, "/api/ports/3000/terminate");
-  assert.deepEqual(JSON.parse(request.options.body), { pid: 42 });
+  assert.deepEqual(JSON.parse(request.options.body), { pid: 42, started_at: null });
 });

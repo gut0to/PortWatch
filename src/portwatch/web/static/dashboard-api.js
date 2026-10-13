@@ -37,6 +37,6 @@ export function terminatePort(port, token) {
       "Content-Type": "application/json",
       "X-PortWatch-Token": token,
     },
-    body: JSON.stringify({ pid: port.pid }),
+    body: JSON.stringify({ pid: port.pid, started_at: port.started_at ?? null }),
   });
 }

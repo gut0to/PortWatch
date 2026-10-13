@@ -104,6 +104,9 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             if not 1 <= port <= MAX_PORT:
                 raise ValueError("Port must be between 1 and 65535.")
             payload = self._read_json_body()
+            started_at = payload.get("started_at")
+            if started_at is not None and not isinstance(started_at, str):
+                raise ValueError("Process start time must be a string or null.")
             pid = payload.get("pid")
             if not isinstance(pid, int) or isinstance(pid, bool) or pid <= 0:
                 raise ValueError("A valid process ID is required.")
@@ -112,7 +115,9 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             return
 
         try:
-            message = terminate_listener(self.server.service, self.server.terminator, port, pid)
+            message = terminate_listener(
+                self.server.service, self.server.terminator, port, pid, started_at
+            )
         except StaleListenerError as error:
             self._send_error(HTTPStatus.CONFLICT, str(error))
             return
