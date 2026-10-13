@@ -52,6 +52,7 @@ def main(
         from portwatch import __version__
 
         typer.echo(f"PortWatch {__version__}")
+        raise typer.Exit()
     elif ctx.invoked_subcommand is None:
         list_ports()
 

@@ -70,3 +70,12 @@ def test_watch_count_stops_without_sleeping(listeners, monkeypatch):
     result = CliRunner().invoke(cli.app, ["watch", "--count", "1"])
     assert result.exit_code == 0
     sleep.assert_not_called()
+
+
+def test_version_skips_requested_subcommand(monkeypatch):
+    scan = Mock(side_effect=AssertionError("must not scan"))
+    monkeypatch.setattr(cli.service, "list_ports", scan)
+    result = CliRunner().invoke(cli.app, ["--version", "list"])
+    assert result.exit_code == 0
+    assert "PortWatch" in result.stdout
+    scan.assert_not_called()
