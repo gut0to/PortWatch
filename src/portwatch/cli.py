@@ -1,6 +1,8 @@
 import json
 import time
 import webbrowser
+from collections.abc import Callable
+from enum import StrEnum
 from typing import Annotated, NoReturn
 
 import typer
@@ -12,6 +14,7 @@ from portwatch.domain.exceptions import (
     PortNotFoundError,
     ProcessTerminationError,
 )
+from portwatch.domain.models import PortInfo
 from portwatch.presentation.console import format_port_count, print_inspection
 from portwatch.presentation.errors import report_system_errors
 from portwatch.presentation.serializers import port_to_dict, ports_to_json
@@ -21,6 +24,14 @@ from portwatch.services.port_service import PortService
 from portwatch.system.termination import ProcessTerminator
 from portwatch.utils.ports import parse_port_range, validate_port
 from portwatch.web.server import create_server
+
+
+class SortField(StrEnum):
+    port = "port"
+    pid = "pid"
+    process = "process"
+    project = "project"
+
 
 app = typer.Typer(
     name="portwatch",
@@ -48,6 +59,9 @@ def main(
 @app.command("list")
 @report_system_errors
 def list_ports(
+    sort: Annotated[
+        SortField, typer.Option("--sort", help="Sort results by a field.")
+    ] = SortField.port,
     pid: Annotated[int | None, typer.Option("--pid", min=1, help="Filter by process ID.")] = None,
     process: Annotated[str, typer.Option("--process", help="Filter process names.")] = "",
     project: Annotated[str, typer.Option("--project", help="Filter detected project names.")] = "",
@@ -64,6 +78,13 @@ def list_ports(
         )
     except InvalidPortError as error:
         _fail(str(error), 2)
+    keys: dict[SortField, Callable[[PortInfo], int | str]] = {
+        SortField.port: lambda item: item.port,
+        SortField.pid: lambda item: item.pid or 0,
+        SortField.process: lambda item: (item.process_name or "").casefold(),
+        SortField.project: lambda item: (item.project_name or "").casefold(),
+    }
+    ports = sorted(ports, key=keys[sort])
     if as_json:
         typer.echo(ports_to_json(ports))
     else:

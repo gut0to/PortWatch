@@ -37,3 +37,9 @@ def test_list_process_filter(listeners):
 def test_list_project_filters_combine(listeners):
     result = CliRunner().invoke(cli.app, ["list", "--project", "front", "--pid", "10", "--json"])
     assert json.loads(result.stdout) == []
+
+
+def test_list_sort_by_process(listeners):
+    result = CliRunner().invoke(cli.app, ["list", "--sort", "process", "--json"])
+    assert [item["port"] for item in json.loads(result.stdout)] == [4000, 3000]
+    assert CliRunner().invoke(cli.app, ["list", "--sort", "bad"]).exit_code == 2
