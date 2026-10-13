@@ -118,3 +118,10 @@ test("range inputs reject exponents decimals and whitespace", async () => {
     assert.throws(() => api.parseRange({ rangeStart: nodes.get("#range-start"), rangeEnd: nodes.get("#range-end") }));
   }
 });
+
+
+test("listener keys distinguish reused process IDs", async () => {
+  const { view } = await dashboard();
+  const item = { port: 3000, pid: 42, process_name: "python" };
+  assert.notEqual(view.listenerKey({ ...item, started_at: "2026-01-01" }), view.listenerKey({ ...item, started_at: "2026-01-02" }));
+});
