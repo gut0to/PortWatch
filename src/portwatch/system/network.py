@@ -43,7 +43,7 @@ class PsutilNetworkScanner:
     @staticmethod
     def _connections() -> Iterable[ConnectionRecord]:
         try:
-            return cast(Iterable[ConnectionRecord], psutil.net_connections(kind="inet"))
+            return cast(Iterable[ConnectionRecord], psutil.net_connections(kind="tcp"))
         except psutil.AccessDenied as error:
             raise PermissionDeniedError(
                 "Insufficient permission to scan TCP listeners. Try an elevated terminal."
