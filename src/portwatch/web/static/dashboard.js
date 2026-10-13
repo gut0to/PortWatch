@@ -40,6 +40,13 @@ async function scan() {
   setNotice("");
 
   try {
+    if (!state.token) {
+      const session = await getJson("/api/session");
+      if (typeof session?.token !== "string" || session.token.length < 32) {
+        throw new Error("The local action token could not be created.");
+      }
+      state.token = session.token;
+    }
     const result = await fetchPorts(range);
     state.ports = Array.isArray(result.ports) ? result.ports : [];
     state.ports.sort((left, right) => left.port - right.port);

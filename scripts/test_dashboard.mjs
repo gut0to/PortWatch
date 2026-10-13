@@ -145,3 +145,15 @@ test("successful termination remains visible after refreshing listeners", async 
   await new Promise(setImmediate);
   assert.equal(nodes.get("#notice").textContent, "Stopped.");
 });
+
+
+test("rescan recovers from an initial session failure", async () => {
+  let sessions = 0;
+  const { nodes } = await dashboard({ respond(url) {
+    if (url === "/api/session" && ++sessions === 1) throw new Error("temporarily unavailable");
+  }});
+  assert.match(nodes.get("#notice").textContent, /temporarily unavailable/);
+  await nodes.get("#rescan").listeners.click();
+  assert.equal(sessions, 2);
+  assert.equal(nodes.get("#port-count").textContent, "1");
+});
