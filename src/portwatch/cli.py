@@ -16,6 +16,7 @@ from portwatch.presentation.console import format_port_count, print_inspection
 from portwatch.presentation.errors import report_system_errors
 from portwatch.presentation.serializers import port_to_dict, ports_to_json
 from portwatch.presentation.tables import ports_table, watch_view
+from portwatch.services.port_filters import filter_ports
 from portwatch.services.port_service import PortService
 from portwatch.system.termination import ProcessTerminator
 from portwatch.utils.ports import parse_port_range, validate_port
@@ -47,6 +48,7 @@ def main(
 @app.command("list")
 @report_system_errors
 def list_ports(
+    search: Annotated[str, typer.Option("--search", help="Search listener metadata.")] = "",
     port_range: Annotated[
         str | None, typer.Option("--range", help="Filter ports, e.g. 3000-9000.")
     ] = None,
@@ -54,7 +56,7 @@ def list_ports(
 ) -> None:
     try:
         parsed_range = parse_port_range(port_range) if port_range else None
-        ports = service.list_ports(parsed_range)
+        ports = filter_ports(service.list_ports(parsed_range), search)
     except InvalidPortError as error:
         _fail(str(error), 2)
     if as_json:
