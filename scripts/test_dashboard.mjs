@@ -157,3 +157,18 @@ test("rescan recovers from an initial session failure", async () => {
   assert.equal(sessions, 2);
   assert.equal(nodes.get("#port-count").textContent, "1");
 });
+
+
+test("termination confirmation stays closed while a scan is pending", async () => {
+  let resolveScan;
+  let block = false;
+  const { nodes } = await dashboard({ respond(url) {
+    if (block && url.startsWith("/api/ports")) return new Promise((resolve) => { resolveScan = resolve; });
+  }});
+  block = true;
+  const pending = nodes.get("#rescan").listeners.click();
+  nodes.get("#terminate").listeners.click();
+  assert.notEqual(nodes.get("#confirm-dialog").open, true);
+  resolveScan({ ok: true, json: async () => ({ ports: [], scanned_at: "2026-01-01" }) });
+  await pending;
+});

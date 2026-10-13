@@ -122,7 +122,7 @@ async function copyValue(value, label) {
 
 function openConfirmation() {
   const port = state.ports.find((item) => listenerKey(item) === state.selectedListener);
-  if (!port?.pid) return;
+  if (!port?.pid || !state.token || state.scanning || state.terminating) return;
   state.pendingTermination = { ...port };
   elements.confirmProcess.textContent = port.process_name || "Unknown process";
   elements.confirmPid.textContent = String(port.pid);
