@@ -82,3 +82,11 @@ def test_inspect_resolves_only_requested_listener():
     resolver.enrich.side_effect = lambda item: item
     assert PortService(scanner=scanner, resolver=resolver).inspect(2).port == 2
     assert resolver.enrich.call_count == 1
+
+
+def test_next_available_never_reads_process_metadata():
+    scanner = Mock()
+    scanner.list_listening_ports.return_value = []
+    resolver = Mock()
+    assert PortService(scanner=scanner, resolver=resolver).next_available(3000) == 3000
+    resolver.enrich.assert_not_called()

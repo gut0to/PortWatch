@@ -33,7 +33,7 @@ class PortService:
 
     def next_available(self, start: int) -> int:
         validate_port(start)
-        occupied = {item.port for item in self.list_ports()}
+        occupied = {item.port for item in self.scanner.list_listening_ports()}
         for port in range(start, 65536):
             if port not in occupied:
                 return port
