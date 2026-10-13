@@ -133,7 +133,8 @@ def verify_runtime(command: list[str]) -> None:
                         if path.endswith(".js"):
                             assert response.headers.get_content_type() == "text/javascript"
                 with urlopen(f"{base}/api/ports?start={port}&end={port}", timeout=10) as response:
-                    assert json.load(response)["ports"][0]["pid"] == fixture_pid
+                    listener = json.load(response)["ports"][0]
+                    assert listener["pid"] == fixture_pid
                 denied = Request(f"{base}/api/ports/{port}/terminate", data=b"{}")
                 try:
                     urlopen(denied, timeout=5)
@@ -143,7 +144,9 @@ def verify_runtime(command: list[str]) -> None:
                     raise AssertionError("Dashboard accepted an unauthenticated action")
                 action = Request(
                     f"{base}/api/ports/{port}/terminate",
-                    data=json.dumps({"pid": fixture_pid}).encode(),
+                    data=json.dumps(
+                        {"pid": fixture_pid, "started_at": listener["started_at"]}
+                    ).encode(),
                     headers={
                         "Origin": base,
                         "Content-Type": "application/json",
