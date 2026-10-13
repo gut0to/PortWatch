@@ -126,6 +126,8 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         if not raw_length.isdecimal():
             raise ValueError("A JSON request body is required.")
         length = int(raw_length)
+        if length == 0:
+            raise ValueError("A JSON request body is required.")
         if length > MAX_REQUEST_BYTES:
             raise ValueError("The request is too large.")
         data = json.loads(self.rfile.read(length), object_pairs_hook=unique_json_object)

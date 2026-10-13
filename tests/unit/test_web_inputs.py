@@ -17,3 +17,18 @@ def test_action_json_rejects_duplicate_pid():
     with pytest.raises(ValueError, match="Duplicate JSON field"):
         json.loads('{"pid":42,"pid":99}', object_pairs_hook=unique_json_object)
     assert unique_json_object([("pid", 42)]) == {"pid": 42}
+
+
+def test_empty_json_body_has_actionable_error():
+    from email.message import Message
+    from io import BytesIO
+
+    from portwatch.web.handler import DashboardRequestHandler
+
+    handler = object.__new__(DashboardRequestHandler)
+    handler.headers = Message()
+    handler.headers["Content-Type"] = "application/json"
+    handler.headers["Content-Length"] = "0"
+    handler.rfile = BytesIO()
+    with pytest.raises(ValueError, match="JSON request body is required"):
+        handler._read_json_body()
