@@ -45,3 +45,9 @@ def test_project_detector_returns_none_without_marker(tmp_path: Path) -> None:
 def test_detects_additional_build_systems(tmp_path, marker):
     (tmp_path / marker).touch()
     assert ProjectDetector().detect(str(tmp_path)) == tmp_path.name
+
+
+@pytest.mark.parametrize("marker", ["app.csproj", "app.fsproj", "app.sln", "app.slnx"])
+def test_detects_dotnet_project_roots(tmp_path, marker):
+    (tmp_path / marker).touch()
+    assert ProjectDetector().detect(str(tmp_path)) == tmp_path.name
