@@ -109,3 +109,12 @@ test("malformed snapshots keep the previous listener results", async () => {
   assert.equal(nodes.get("#port-count").textContent, "1");
   assert.match(nodes.get("#notice").textContent, /invalid listener snapshot/);
 });
+
+
+test("range inputs reject exponents decimals and whitespace", async () => {
+  const { api, nodes } = await dashboard();
+  for (const value of ["1e3", "1.0", " 1", "", "0x10"]) {
+    nodes.get("#range-start").value = value;
+    assert.throws(() => api.parseRange({ rangeStart: nodes.get("#range-start"), rangeEnd: nodes.get("#range-end") }));
+  }
+});
