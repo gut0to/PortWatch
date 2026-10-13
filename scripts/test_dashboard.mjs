@@ -136,3 +136,12 @@ test("repeated confirmation submissions send one stop request", async () => {
   await new Promise(setImmediate);
   assert.equal(requests.filter(({ url }) => url.includes("terminate")).length, 1);
 });
+
+
+test("successful termination remains visible after refreshing listeners", async () => {
+  const { nodes } = await dashboard();
+  nodes.get("#terminate").listeners.click();
+  nodes.get("#confirm-form").listeners.submit({ preventDefault() {} });
+  await new Promise(setImmediate);
+  assert.equal(nodes.get("#notice").textContent, "Stopped.");
+});

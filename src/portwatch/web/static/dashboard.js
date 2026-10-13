@@ -132,8 +132,10 @@ async function terminateSelected() {
   try {
     const result = await terminatePort(port, state.token);
     elements.dialog.close();
-    setNotice(result.message || "Termination request sent.", "success");
     await scan();
+    if (elements.connection.dataset.state !== "error") {
+      setNotice(result.message || "Termination request sent.", "success");
+    }
   } catch (error) {
     elements.dialog.close();
     setNotice(error.message || "The process could not be stopped.", "error");
