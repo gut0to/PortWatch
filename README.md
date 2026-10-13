@@ -105,6 +105,34 @@ port instead of an available one.
 
 Use `portwatch list --json` or `portwatch inspect 3000 --json` in scripts.
 
+Narrow a listener snapshot by range, search text, process ID, process name, or
+detected project name. Text filters ignore case and combine with each other:
+
+```bash
+portwatch list --range 3000-9000 --search backend
+portwatch list --process python --project backend --json
+portwatch list --pid 1234 --csv
+portwatch list --sort process --descending
+portwatch next 3000 --json
+portwatch watch --interval 1 --count 10
+```
+
+`--sort` accepts `port` (the default), `pid`, `process`, and `project`.
+`--csv` includes a header even when no listeners match; choose either `--csv`
+or `--json`. `next --json` returns `start`, `port`, and `available`, where
+`available` indicates whether the starting port was free in the scan.
+Available-port discovery is a snapshot; it does not reserve a socket.
+`watch --count N` stops after N scans; omitting it or using zero watches until
+Ctrl+C. Intervals must be finite and at least 0.2 seconds.
+
+Project detection recognizes Kotlin Gradle, Deno, CMake, Make, and .NET project
+and solution files alongside the existing project markers.
+
+The dashboard retains the previous results if a scan returns invalid data and
+can reconnect through Rescan after an initial connection failure. Stopping a
+process rechecks its PID and start time against the confirmed listener. A
+restarted process requires a fresh scan and confirmation.
+
 Human-readable commands use Rich formatting; JSON commands write only data to
 stdout. Errors are written to stderr with stable exit codes: `0` success, `1`
 generic error, `2` invalid arguments, `3` requested port is not listening, `4`

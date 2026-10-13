@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- CLI listener search and combined PID, process, and project filters.
+- Sorting by port, PID, process, or project with optional descending order.
+- CSV listener snapshots, JSON available-port discovery, and bounded watch sessions.
+- Project detection for Kotlin Gradle, Deno, CMake, Make, and .NET.
+
+### Fixed
+
+- Range filtering and single-port queries avoid reading unrelated process metadata.
+- Available-port discovery reads the socket inventory without process enrichment.
+- TCP scans no longer collect UDP sockets and tolerate malformed socket addresses.
+- Port validation rejects non-integers, Unicode digits, and oversized range values.
+- Version requests exit before running a subcommand; watch intervals reject infinity and NaN.
+- Dashboard requests bound query fields, reject duplicate JSON keys, and time out idle sockets.
+- Dashboard termination rechecks process start time to detect PID reuse.
+- Dashboard snapshots are validated before replacing visible results.
+- Repeated stop submissions are ignored and confirmations are blocked during scans.
+- Rescan recovers initial session failures; action feedback survives follow-up scans.
+
 ## [0.1.1] - 2026-10-02
 
 ### Fixed
