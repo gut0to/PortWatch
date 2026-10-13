@@ -64,3 +64,8 @@ def test_scanner_requests_only_tcp_connections(monkeypatch):
     monkeypatch.setattr("portwatch.system.network.psutil.net_connections", scan)
     assert list(PsutilNetworkScanner._connections()) == []
     scan.assert_called_once_with(kind="tcp")
+
+
+@pytest.mark.parametrize("port", [None, "bad", True, 0, -1, 65536])
+def test_scanner_ignores_malformed_socket_ports(port):
+    assert PsutilNetworkScanner._port_from_address(("localhost", port)) is None
