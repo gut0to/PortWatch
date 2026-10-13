@@ -3,7 +3,10 @@
 from portwatch.domain.models import PortInfo
 
 
-def filter_ports(ports: list[PortInfo], query: str = "") -> list[PortInfo]:
+def filter_ports(
+    ports: list[PortInfo], query: str = "", *, pid: int | None = None
+) -> list[PortInfo]:
+    ports = [item for item in ports if pid is None or item.pid == pid]
     needle = query.strip().casefold()
     return [
         item

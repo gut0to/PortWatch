@@ -21,3 +21,9 @@ def test_list_search(listeners):
     result = CliRunner().invoke(cli.app, ["list", "--search", "BACKEND", "--json"])
     assert result.exit_code == 0
     assert [item["port"] for item in json.loads(result.stdout)] == [3000]
+
+
+def test_list_pid_filter(listeners):
+    result = CliRunner().invoke(cli.app, ["list", "--pid", "20", "--json"])
+    assert [item["port"] for item in json.loads(result.stdout)] == [4000]
+    assert CliRunner().invoke(cli.app, ["list", "--pid", "0"]).exit_code == 2
