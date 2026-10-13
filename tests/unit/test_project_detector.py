@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from portwatch.services.project_detector import ProjectDetector
 
 
@@ -27,3 +29,19 @@ def test_project_detector_returns_none_without_marker(tmp_path: Path) -> None:
     directory.mkdir()
 
     assert ProjectDetector().detect(str(directory)) is None
+
+
+@pytest.mark.parametrize(
+    "marker",
+    [
+        "build.gradle.kts",
+        "settings.gradle.kts",
+        "deno.json",
+        "deno.jsonc",
+        "CMakeLists.txt",
+        "Makefile",
+    ],
+)
+def test_detects_additional_build_systems(tmp_path, marker):
+    (tmp_path / marker).touch()
+    assert ProjectDetector().detect(str(tmp_path)) == tmp_path.name
