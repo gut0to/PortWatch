@@ -43,3 +43,16 @@ def test_oversized_query_returns_bad_request_without_scanning():
     handler._send_error = Mock()
     handler._list_ports("&".join("start=1" for _ in range(17)))
     assert handler._send_error.call_args.args[0] == 400
+
+
+def test_request_setup_limits_idle_socket_reads(monkeypatch):
+    from http.server import BaseHTTPRequestHandler
+    from unittest.mock import Mock
+
+    from portwatch.web.handler import DashboardRequestHandler
+
+    handler = object.__new__(DashboardRequestHandler)
+    handler.request = Mock()
+    monkeypatch.setattr(BaseHTTPRequestHandler, "setup", lambda self: None)
+    handler.setup()
+    handler.request.settimeout.assert_called_once_with(10)

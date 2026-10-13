@@ -38,6 +38,10 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
     server_version = "PortWatch"
     sys_version = ""
 
+    def setup(self) -> None:
+        self.request.settimeout(10)
+        super().setup()
+
     def do_GET(self) -> None:
         if not self._has_expected_host():
             self._send_error(HTTPStatus.FORBIDDEN, "This dashboard is available on localhost only.")
@@ -103,7 +107,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             pid = payload.get("pid")
             if not isinstance(pid, int) or isinstance(pid, bool) or pid <= 0:
                 raise ValueError("A valid process ID is required.")
-        except (ValueError, UnicodeDecodeError) as error:
+        except (ValueError, UnicodeDecodeError, TimeoutError) as error:
             self._send_error(HTTPStatus.BAD_REQUEST, str(error))
             return
 
