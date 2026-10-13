@@ -26,8 +26,17 @@ export function parseRange(elements) {
   return { start, end };
 }
 
-export function fetchPorts(range) {
-  return getJson(`/api/ports?start=${range.start}&end=${range.end}`);
+export async function fetchPorts(range) {
+  const data = await getJson(`/api/ports?start=${range.start}&end=${range.end}`);
+  const textFields = ["process_name", "project_name", "command", "working_directory", "started_at"];
+  if (!data || !Array.isArray(data.ports) || typeof data.scanned_at !== "string" ||
+      !data.ports.every((port) => port && Number.isInteger(port.port) && port.port >= 1 && port.port <= 65535 &&
+        typeof port.protocol === "string" && typeof port.status === "string" &&
+        (port.pid == null || (Number.isInteger(port.pid) && port.pid > 0)) &&
+        textFields.every((field) => port[field] == null || typeof port[field] === "string"))) {
+    throw new Error("The local dashboard returned an invalid listener snapshot. Rescan to try again.");
+  }
+  return data;
 }
 
 export function terminatePort(port, token) {

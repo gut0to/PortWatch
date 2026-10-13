@@ -100,3 +100,12 @@ test("action requests preserve both JSON accept and authorization headers", asyn
   assert.equal(headers.Accept, "application/json");
   assert.equal(headers["X-PortWatch-Token"], "token");
 });
+
+
+test("malformed snapshots keep the previous listener results", async () => {
+  const { nodes, setPorts } = await dashboard();
+  setPorts([{ port: "wrong", protocol: null }]);
+  await nodes.get("#rescan").listeners.click();
+  assert.equal(nodes.get("#port-count").textContent, "1");
+  assert.match(nodes.get("#notice").textContent, /invalid listener snapshot/);
+});
