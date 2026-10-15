@@ -1,4 +1,3 @@
-
 import pytest
 from typer.testing import CliRunner
 
@@ -32,3 +31,12 @@ def invoke(*args):
     result = CliRunner().invoke(cli.app, list(args))
     assert result.exit_code == 0, result.output
     return result.stdout
+
+
+def test_port_selection_union():
+    from portwatch.utils.ports import parse_port_selection
+
+    assert parse_port_selection("3000, 3001-3003,3000") == frozenset(range(3000, 3004))
+    for value in ("", "1,", "0", "2-1", "x", "1" * 4097):
+        with pytest.raises(InvalidPortError):
+            parse_port_selection(value)
