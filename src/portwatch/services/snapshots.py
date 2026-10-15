@@ -3,6 +3,7 @@
 import json
 import os
 import tempfile
+from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 from typing import cast
@@ -113,3 +114,8 @@ def write_snapshot(path: Path, content: str, *, overwrite: bool = False) -> None
             os.link(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)
+
+
+def redact_snapshot(ports: list[PortInfo]) -> list[PortInfo]:
+    """Remove command lines and local paths while retaining comparison identities."""
+    return [replace(item, command=None, working_directory=None) for item in ports]

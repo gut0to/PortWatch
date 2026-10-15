@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 from unittest.mock import Mock
 
 import pytest
@@ -66,3 +67,18 @@ def test_cli_snapshot_output_formats_and_overwrite(tmp_path, monkeypatch):
         )
     assert runner.invoke(cli.app, ["list", "--overwrite"]).exit_code == 2
     assert runner.invoke(cli.app, ["list", "--quiet", "--output", str(path)]).exit_code == 2
+
+
+def test_redaction_preserves_identity_and_original_snapshot(monkeypatch):
+    from portwatch.services.snapshots import redact_snapshot
+
+    original = PortInfo(
+        3000, "tcp", "LISTENING", pid=42, command="secret-token", working_directory="private"
+    )
+    assert redact_snapshot([original]) == [replace(original, command=None, working_directory=None)]
+    monkeypatch.setattr(cli.service, "list_ports", lambda bounds=None: [original])
+    result = CliRunner().invoke(cli.app, ["list", "--redact", "--json"])
+    assert result.exit_code == 0
+    assert "secret-token" not in result.stdout
+    assert json.loads(result.stdout)[0]["pid"] == 42
+    assert original.command == "secret-token"

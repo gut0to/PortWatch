@@ -30,7 +30,12 @@ from portwatch.presentation.tables import ports_table, watch_view
 from portwatch.services.port_filters import filter_ports
 from portwatch.services.port_service import PortService
 from portwatch.services.reports import group_ports, summarize_ports
-from portwatch.services.snapshots import diff_snapshots, load_snapshot, write_snapshot
+from portwatch.services.snapshots import (
+    diff_snapshots,
+    load_snapshot,
+    redact_snapshot,
+    write_snapshot,
+)
 from portwatch.system.termination import ProcessTerminator
 from portwatch.utils.ports import parse_port_range, parse_port_selection, validate_port
 from portwatch.web.server import create_server
@@ -76,6 +81,9 @@ def main(
 @app.command("list")
 @report_system_errors
 def list_ports(
+    redact: Annotated[
+        bool, typer.Option("--redact", help="Remove commands and working directories.")
+    ] = False,
     output: Annotated[
         Path | None, typer.Option("--output", "-o", help="Write a UTF-8 snapshot file.")
     ] = None,
@@ -152,6 +160,8 @@ def list_ports(
         SortField.project: lambda item: (item.project_name or "").casefold(),
     }
     ports = sorted(ports, key=keys[sort], reverse=descending)
+    if redact:
+        ports = redact_snapshot(ports)
     ports = ports[offset:]
     if limit:
         ports = ports[:limit]

@@ -190,3 +190,8 @@ must contain a JSON array of listening TCP records and be at most 10 MiB.
 without emitting a table. Select `--csv` or `--json-lines` for those file formats.
 The parent directory must exist. Existing files are preserved unless you pass
 `--overwrite`; publication uses a temporary file in the destination directory.
+
+
+Add `list --redact` to remove command lines and working-directory paths from
+the resulting output. Filtering uses the original metadata first. Process names,
+project names, PIDs, and timestamps remain available; review them before sharing.
