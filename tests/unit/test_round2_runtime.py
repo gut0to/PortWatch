@@ -1,3 +1,4 @@
+from datetime import UTC
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -30,3 +31,12 @@ def test_invalid_process_timestamps_do_not_abort_scan(timestamp):
     process = Mock()
     process.create_time.return_value = timestamp
     assert PsutilProcessResolver._safe_create_time(process) is None
+
+
+def test_elapsed_time_accepts_timezone_aware_snapshots():
+    from datetime import datetime, timedelta
+
+    from portwatch.presentation.console import format_started
+
+    assert "2m" in format_started(datetime.now(UTC) - timedelta(minutes=2, seconds=3))
+    assert format_started(datetime.now(UTC) + timedelta(days=1)) == "0s ago"

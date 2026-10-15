@@ -32,7 +32,7 @@ def print_inspection(console: Console, item: PortInfo) -> None:
 def format_started(value: datetime | None) -> str:
     if value is None:
         return "-"
-    elapsed = max(0, int((datetime.now() - value).total_seconds()))
+    elapsed = max(0, int((datetime.now(tz=value.tzinfo) - value).total_seconds()))
     minutes, seconds = divmod(elapsed, 60)
     hours, minutes = divmod(minutes, 60)
     if hours:
