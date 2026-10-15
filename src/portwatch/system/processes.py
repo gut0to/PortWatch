@@ -1,3 +1,6 @@
+import os
+import shlex
+import subprocess
 from datetime import datetime
 from typing import Protocol
 
@@ -45,7 +48,11 @@ class PsutilProcessResolver:
     def _safe_cmdline(process: psutil.Process) -> str | None:
         try:
             command = process.cmdline()
-            return " ".join(command) if command else None
+            return (
+                (subprocess.list2cmdline(command) if os.name == "nt" else shlex.join(command))
+                if command
+                else None
+            )
         except (psutil.AccessDenied, psutil.NoSuchProcess, psutil.ZombieProcess):
             return None
 
