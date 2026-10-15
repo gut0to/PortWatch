@@ -67,3 +67,11 @@ def test_search_can_exclude_metadata_terms(listeners):
     result = json.loads(invoke("list", "--search", "python -worker", "--json"))
     assert [item["pid"] for item in result] == [10]
     assert len(json.loads(invoke("list", "--search=-missing", "--json"))) == 3
+
+
+def test_exact_filters_distinguish_related_processes(listeners):
+    from portwatch.services.port_filters import filter_ports
+
+    assert [item.pid for item in filter_ports(listeners, process="PYTHON", exact=True)] == [10]
+    assert [item.pid for item in filter_ports(listeners, project="api", exact=True)] == [10]
+    assert len(filter_ports(listeners, process="python")) == 2

@@ -10,13 +10,20 @@ def filter_ports(
     pid: int | None = None,
     process: str = "",
     project: str = "",
+    exact: bool = False,
 ) -> list[PortInfo]:
     matches = [item for item in ports if pid is None or item.pid == pid]
     for field, value in (("process_name", process), ("project_name", project)):
         needle = value.strip().casefold()
         if needle:
             matches = [
-                item for item in matches if needle in (getattr(item, field) or "").casefold()
+                item
+                for item in matches
+                if (
+                    (getattr(item, field) or "").casefold() == needle
+                    if exact
+                    else needle in (getattr(item, field) or "").casefold()
+                )
             ]
     terms = query.casefold().split()
     return [item for item in matches if _matches_terms(item, terms)]
