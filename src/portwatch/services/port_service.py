@@ -31,10 +31,10 @@ class PortService:
                 return self._enrich(item)
         raise PortNotFoundError(f"Port {port} is available.")
 
-    def next_available(self, start: int) -> int:
-        validate_port(start)
+    def next_available(self, start: int, end: int = 65535) -> int:
+        bounds = PortRange(start, end)
         occupied = {item.port for item in self.scanner.list_listening_ports()}
-        for port in range(start, 65536):
+        for port in range(bounds.start, bounds.end + 1):
             if port not in occupied:
                 return port
         raise PortNotFoundError("No available port was found.")

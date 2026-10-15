@@ -3,8 +3,11 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
+from typer.testing import CliRunner
 
+import portwatch.cli as cli
 import portwatch.system.processes as processes
+from portwatch.domain.models import PortInfo
 from portwatch.system.processes import PsutilProcessResolver
 
 
@@ -69,3 +72,20 @@ def test_unusable_socket_owners_remain_unresolved(monkeypatch, pid):
     )
     monkeypatch.setattr(PsutilNetworkScanner, "_connections", staticmethod(lambda: [entry]))
     assert PsutilNetworkScanner().list_listening_ports()[0].pid is None
+
+
+def test_available_port_search_obeys_end(monkeypatch):
+    from portwatch.domain.exceptions import InvalidPortError, PortNotFoundError
+    from portwatch.services.port_service import PortService
+
+    scanner = Mock()
+    scanner.list_listening_ports.return_value = [PortInfo(3000, "tcp", "LISTENING")]
+    service = PortService(scanner=scanner)
+    assert service.next_available(3000, 3001) == 3001
+    with pytest.raises(PortNotFoundError):
+        service.next_available(3000, 3000)
+    with pytest.raises(InvalidPortError):
+        service.next_available(3001, 3000)
+    monkeypatch.setattr(cli, "service", service)
+    result = CliRunner().invoke(cli.app, ["next", "3000", "--end", "3001"])
+    assert result.exit_code == 0 and result.stdout.strip() == "3001"
