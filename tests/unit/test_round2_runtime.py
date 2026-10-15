@@ -23,3 +23,10 @@ def test_command_display_quotes_argument_boundaries(monkeypatch, platform):
     assert PsutilProcessResolver._safe_cmdline(process) == expected
     process.cmdline.return_value = []
     assert PsutilProcessResolver._safe_cmdline(process) is None
+
+
+@pytest.mark.parametrize("timestamp", [float("nan"), float("inf"), float("-inf"), 1e50])
+def test_invalid_process_timestamps_do_not_abort_scan(timestamp):
+    process = Mock()
+    process.create_time.return_value = timestamp
+    assert PsutilProcessResolver._safe_create_time(process) is None

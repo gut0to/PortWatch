@@ -67,5 +67,12 @@ class PsutilProcessResolver:
     def _safe_create_time(process: psutil.Process) -> datetime | None:
         try:
             return datetime.fromtimestamp(process.create_time())
-        except (psutil.AccessDenied, psutil.NoSuchProcess, psutil.ZombieProcess, OSError):
+        except (
+            psutil.AccessDenied,
+            psutil.NoSuchProcess,
+            psutil.ZombieProcess,
+            OSError,
+            OverflowError,
+            ValueError,
+        ):
             return None
