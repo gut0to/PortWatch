@@ -219,11 +219,27 @@ def inspect(
 def next(
     port: Annotated[int, typer.Argument(help="Starting port.")],
     as_json: Annotated[bool, typer.Option("--json", help="Print machine-readable JSON.")] = False,
+    count: Annotated[
+        int, typer.Option("--count", min=1, max=65535, help="Number of free ports needed.")
+    ] = 1,
     end: Annotated[
         int, typer.Option("--end", min=1, max=65535, help="Last port to consider.")
     ] = 65535,
     verbose: Annotated[bool, typer.Option("--verbose", help="Explain the result.")] = False,
 ) -> None:
+    if count > 1:
+        try:
+            found = service.available_ports(port, count, end)
+        except InvalidPortError as error:
+            _fail(str(error), 2)
+        except PortNotFoundError as error:
+            _fail(str(error), 3)
+        if as_json:
+            typer.echo(json.dumps({"start": port, "ports": found}))
+        else:
+            for candidate in found:
+                typer.echo(f"Available port: {candidate}" if verbose else str(candidate))
+        return
     try:
         available = (
             service.next_available(port) if end == 65535 else service.next_available(port, end)

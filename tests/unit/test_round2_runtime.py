@@ -1,3 +1,4 @@
+import json
 from datetime import UTC
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -89,3 +90,30 @@ def test_available_port_search_obeys_end(monkeypatch):
     monkeypatch.setattr(cli, "service", service)
     result = CliRunner().invoke(cli.app, ["next", "3000", "--end", "3001"])
     assert result.exit_code == 0 and result.stdout.strip() == "3001"
+
+
+def test_multiple_available_ports_use_one_scan(monkeypatch):
+    from portwatch.domain.exceptions import InvalidPortError, PortNotFoundError
+    from portwatch.services.port_service import PortService
+
+    scanner = Mock()
+    scanner.list_listening_ports.return_value = [PortInfo(3001, "tcp", "LISTENING")]
+    service = PortService(scanner=scanner)
+    assert service.available_ports(3000, 2, 3003) == [3000, 3002]
+    scanner.list_listening_ports.assert_called_once()
+    for count in (0, True, 1.5):
+        with pytest.raises(InvalidPortError):
+            service.available_ports(3000, count)
+    with pytest.raises(PortNotFoundError):
+        service.available_ports(65535, 2)
+    monkeypatch.setattr(cli, "service", service)
+    runner = CliRunner()
+    result = runner.invoke(cli.app, ["next", "3000", "--count", "2", "--json"])
+    assert json.loads(result.stdout)["ports"] == [3000, 3002]
+    assert runner.invoke(cli.app, ["next", "3000", "--count", "2"]).stdout == "3000\n3002\n"
+    assert (
+        "Available port: 3000"
+        in runner.invoke(cli.app, ["next", "3000", "--count", "2", "--verbose"]).stdout
+    )
+    assert runner.invoke(cli.app, ["next", "65535", "--count", "2"]).exit_code == 3
+    assert runner.invoke(cli.app, ["next", "4000", "--end", "3000", "--count", "2"]).exit_code == 2
