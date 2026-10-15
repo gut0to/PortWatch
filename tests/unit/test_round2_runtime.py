@@ -117,3 +117,17 @@ def test_multiple_available_ports_use_one_scan(monkeypatch):
     )
     assert runner.invoke(cli.app, ["next", "65535", "--count", "2"]).exit_code == 3
     assert runner.invoke(cli.app, ["next", "4000", "--end", "3000", "--count", "2"]).exit_code == 2
+
+
+def test_json_watch_is_bounded_and_machine_readable(monkeypatch):
+    monkeypatch.setattr(
+        cli.service, "list_ports", lambda bounds=None: [PortInfo(3000, "tcp", "LISTENING")]
+    )
+    sleep = Mock()
+    monkeypatch.setattr(cli.time, "sleep", sleep)
+    result = CliRunner().invoke(cli.app, ["watch", "--count", "2", "--json"])
+    assert result.exit_code == 0
+    rows = [json.loads(line) for line in result.stdout.splitlines()]
+    assert len(rows) == 2
+    assert rows[0]["ports"][0]["port"] == 3000
+    sleep.assert_called_once_with(2.0)

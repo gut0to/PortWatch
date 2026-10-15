@@ -3,6 +3,7 @@ import math
 import time
 import webbrowser
 from collections.abc import Callable
+from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, NoReturn
@@ -27,6 +28,7 @@ from portwatch.presentation.serializers import (
     ports_to_json_lines,
 )
 from portwatch.presentation.tables import ports_table, watch_view
+from portwatch.services.monitoring import watch_snapshots
 from portwatch.services.port_filters import filter_ports
 from portwatch.services.port_service import PortService
 from portwatch.services.reports import group_ports, summarize_ports
@@ -284,6 +286,9 @@ def free(
 @app.command()
 @report_system_errors
 def watch(
+    as_json: Annotated[
+        bool, typer.Option("--json", help="Stream one JSON snapshot per scan.")
+    ] = False,
     count: Annotated[
         int, typer.Option("--count", min=0, help="Stop after N scans; 0 watches forever.")
     ] = 0,
@@ -300,16 +305,24 @@ def watch(
         parsed_range = parse_port_range(port_range) if port_range else None
     except InvalidPortError as error:
         _fail(str(error), 2)
+    snapshots = watch_snapshots(
+        lambda: service.list_ports(parsed_range), interval, count, sleep=time.sleep
+    )
     try:
-        with Live(console=console, refresh_per_second=max(1, int(1 / interval))) as live:
-            scans = 0
-            while True:
-                ports = service.list_ports(parsed_range)
-                live.update(watch_view(ports, interval))
-                scans += 1
-                if count and scans >= count:
-                    break
-                time.sleep(interval)
+        if as_json:
+            for ports in snapshots:
+                typer.echo(
+                    json.dumps(
+                        {
+                            "ports": [port_to_dict(item) for item in ports],
+                            "scanned_at": datetime.now().astimezone().isoformat(),
+                        }
+                    )
+                )
+        else:
+            with Live(console=console, refresh_per_second=max(1, int(1 / interval))) as live:
+                for ports in snapshots:
+                    live.update(watch_view(ports, interval))
     except KeyboardInterrupt:
         return
 
