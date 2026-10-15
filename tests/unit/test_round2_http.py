@@ -35,3 +35,24 @@ def body_handler(headers, body=b"{}"):
         handler.headers[name] = value
     handler.rfile = BytesIO(body)
     return handler
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [
+        [],
+        [("Content-Length", "2"), ("Content-Length", "2")],
+        [("Content-Length", "2"), ("Transfer-Encoding", "chunked")],
+        [("Content-Length", "٢")],
+        [("Content-Length", "2" * 5000)],
+        [("Content-Length", "2,2")],
+        [("Content-Length", "+2")],
+    ],
+)
+def test_action_framing_is_unambiguous_and_bounded(headers):
+    with pytest.raises(ValueError):
+        body_handler(headers)._read_json_body()
+
+
+def test_action_framing_accepts_a_single_bounded_length():
+    assert body_handler([("Content-Length", "2")])._read_json_body() == {}

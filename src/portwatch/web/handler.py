@@ -136,8 +136,13 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
     def _read_json_body(self) -> dict[str, object]:
         if self.headers.get_content_type() != "application/json":
             raise ValueError("The request must use JSON.")
-        raw_length = self.headers.get("Content-Length", "")
-        if not raw_length.isdecimal():
+        if self.headers.get("Transfer-Encoding") is not None:
+            raise ValueError("Transfer-encoded action bodies are not supported.")
+        lengths = self.headers.get_all("Content-Length", [])
+        if len(lengths) != 1:
+            raise ValueError("Exactly one Content-Length header is required.")
+        raw_length = lengths[0]
+        if not 1 <= len(raw_length) <= 4 or not raw_length.isascii() or not raw_length.isdecimal():
             raise ValueError("A JSON request body is required.")
         length = int(raw_length)
         if length == 0:
