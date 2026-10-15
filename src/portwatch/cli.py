@@ -4,6 +4,7 @@ import time
 import webbrowser
 from collections.abc import Callable
 from enum import StrEnum
+from pathlib import Path
 from typing import Annotated, NoReturn
 
 import typer
@@ -29,6 +30,7 @@ from portwatch.presentation.tables import ports_table, watch_view
 from portwatch.services.port_filters import filter_ports
 from portwatch.services.port_service import PortService
 from portwatch.services.reports import group_ports, summarize_ports
+from portwatch.services.snapshots import diff_snapshots, load_snapshot
 from portwatch.system.termination import ProcessTerminator
 from portwatch.utils.ports import parse_port_range, parse_port_selection, validate_port
 from portwatch.web.server import create_server
@@ -368,3 +370,33 @@ def summary(
             console.print(Text(f"{label.title()}: {value}"))
         for item in groups:
             console.print(Text(f"{item['name']}: {item['listeners']} listeners"))
+
+
+@app.command("diff")
+@report_system_errors
+def compare_snapshots(
+    before: Annotated[
+        Path, typer.Argument(exists=True, dir_okay=False, help="Earlier JSON snapshot.")
+    ],
+    after: Annotated[
+        Path | None,
+        typer.Argument(exists=True, dir_okay=False, help="Later snapshot; omit to scan now."),
+    ] = None,
+    as_json: Annotated[
+        bool, typer.Option("--json", help="Print added, removed, and changed listeners.")
+    ] = False,
+) -> None:
+    """Compare saved snapshots or compare one snapshot with live listeners."""
+    try:
+        changes = diff_snapshots(
+            load_snapshot(before), load_snapshot(after) if after else service.list_ports()
+        )
+    except ValueError as error:
+        _fail(f"Invalid snapshot: {error}", 2)
+    if as_json:
+        typer.echo(json.dumps(changes, indent=2))
+    else:
+        for kind, rows in changes.items():
+            console.print(Text(f"{kind.title()}: {len(rows)}"))
+            for row in rows:
+                console.print(Text(json.dumps(row, ensure_ascii=False)))

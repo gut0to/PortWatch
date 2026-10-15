@@ -1,7 +1,10 @@
+import json
 from datetime import datetime
 
 import pytest
+from typer.testing import CliRunner
 
+import portwatch.cli as cli
 from portwatch.domain.models import PortInfo
 from portwatch.presentation.serializers import port_to_dict
 from portwatch.services.snapshots import decode_snapshot
@@ -75,3 +78,21 @@ def test_snapshot_diff_reports_metadata_changes_without_owner_changes():
     result = diff_snapshots([old], [new])
     assert result["added"] == result["removed"] == []
     assert result["changed"] == [{"before": port_to_dict(old), "after": port_to_dict(new)}]
+
+
+def test_diff_command_saved_and_live(tmp_path, monkeypatch):
+    before = tmp_path / "before.json"
+    after = tmp_path / "after.json"
+    before.write_text("[]", encoding="utf-8")
+    item = PortInfo(3000, "tcp", "LISTENING")
+    after.write_text(json.dumps([port_to_dict(item)]), encoding="utf-8")
+    monkeypatch.setattr(cli.service, "list_ports", lambda: [item])
+    runner = CliRunner()
+    saved = runner.invoke(cli.app, ["diff", str(before), str(after), "--json"])
+    assert saved.exit_code == 0
+    assert json.loads(saved.stdout)["added"] == [port_to_dict(item)]
+    live = runner.invoke(cli.app, ["diff", str(before)])
+    assert live.exit_code == 0
+    assert "Added: 1" in live.stdout
+    before.write_text("{}", encoding="utf-8")
+    assert runner.invoke(cli.app, ["diff", str(before)]).exit_code == 2
