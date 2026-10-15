@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import cast
 
 from portwatch.domain.models import PortInfo
+from portwatch.presentation.serializers import port_to_dict
 from portwatch.utils.ports import validate_port
 
 
@@ -56,3 +57,25 @@ def load_snapshot(path: Path) -> list[PortInfo]:
     if len(raw) > MAX_SNAPSHOT_BYTES:
         raise ValueError("Snapshot files must be at most 10 MiB.")
     return decode_snapshot(json.loads(raw.decode("utf-8")))
+
+
+def _identity(item: PortInfo) -> tuple[int, str, int, str]:
+    return (
+        item.port,
+        item.protocol,
+        item.pid or -1,
+        item.started_at.isoformat() if item.started_at else "",
+    )
+
+
+def diff_snapshots(
+    before: list[PortInfo], after: list[PortInfo]
+) -> dict[str, list[dict[str, object]]]:
+    previous = {_identity(item): item for item in before}
+    current = {_identity(item): item for item in after}
+    return {
+        "added": [port_to_dict(current[key]) for key in sorted(current.keys() - previous.keys())],
+        "removed": [
+            port_to_dict(previous[key]) for key in sorted(previous.keys() - current.keys())
+        ],
+    }

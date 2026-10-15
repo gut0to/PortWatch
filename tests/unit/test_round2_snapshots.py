@@ -52,3 +52,14 @@ def test_snapshot_file_loader_bounds_reads_and_validates_json(tmp_path, monkeypa
     path.write_text("{", encoding="utf-8")
     with pytest.raises(ValueError):
         snapshots.load_snapshot(path)
+
+
+def test_snapshot_diff_detects_restart_and_orders_ports():
+    from portwatch.services.snapshots import diff_snapshots
+
+    old = PortInfo(3000, "tcp", "LISTENING", pid=42, started_at=datetime(2026, 1, 1))
+    new = PortInfo(3000, "tcp", "LISTENING", pid=42, started_at=datetime(2026, 1, 2))
+    result = diff_snapshots([old], [new, PortInfo(80, "tcp", "LISTENING")])
+    assert [row["port"] for row in result["added"]] == [80, 3000]
+    assert result["removed"] == [port_to_dict(old)]
+    assert diff_snapshots([old], [old]) == {"added": [], "removed": []}
