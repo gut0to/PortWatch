@@ -82,3 +82,10 @@ def test_cli_exact_filter(listeners):
         invoke("list", "--process", "python", "--project", "API", "--exact", "--json")
     )
     assert [item["pid"] for item in result] == [10]
+
+
+def test_list_limit_after_sort(listeners):
+    result = json.loads(invoke("list", "--descending", "--limit", "1", "--json"))
+    assert [item["port"] for item in result] == [4000]
+    assert len(json.loads(invoke("list", "--limit", "0", "--json"))) == 3
+    assert CliRunner().invoke(cli.app, ["list", "--limit", "-1"]).exit_code == 2

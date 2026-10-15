@@ -61,6 +61,9 @@ def main(
 @app.command("list")
 @report_system_errors
 def list_ports(
+    limit: Annotated[
+        int, typer.Option("--limit", min=0, help="Maximum results; 0 returns all.")
+    ] = 0,
     exact: Annotated[
         bool, typer.Option("--exact", help="Match process and project names exactly.")
     ] = False,
@@ -112,6 +115,8 @@ def list_ports(
         SortField.project: lambda item: (item.project_name or "").casefold(),
     }
     ports = sorted(ports, key=keys[sort], reverse=descending)
+    if limit:
+        ports = ports[:limit]
     if as_csv:
         typer.echo(ports_to_csv(ports))
     elif as_json:
