@@ -96,3 +96,14 @@ def test_diff_command_saved_and_live(tmp_path, monkeypatch):
     assert "Added: 1" in live.stdout
     before.write_text("{}", encoding="utf-8")
     assert runner.invoke(cli.app, ["diff", str(before)]).exit_code == 2
+
+
+def test_diff_exit_status_preserves_json_output(tmp_path, monkeypatch):
+    path = tmp_path / "ports.json"
+    path.write_text("[]", encoding="utf-8")
+    monkeypatch.setattr(cli.service, "list_ports", lambda: [PortInfo(3000, "tcp", "LISTENING")])
+    result = CliRunner().invoke(cli.app, ["diff", str(path), "--json", "--exit-code"])
+    assert result.exit_code == 6
+    assert len(json.loads(result.stdout)["added"]) == 1
+    monkeypatch.setattr(cli.service, "list_ports", lambda: [])
+    assert CliRunner().invoke(cli.app, ["diff", str(path), "--exit-code"]).exit_code == 0

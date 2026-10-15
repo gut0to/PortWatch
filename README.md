@@ -171,3 +171,16 @@ output for an empty result. These formats cannot be combined with each other,
 project names, and unresolved owners. Add `--json` for scripts, `--range` or
 `--search` to narrow the snapshot, and `--group process` or `--group project` for
 per-name totals. Missing names appear in the `Unknown` group.
+
+
+### Comparing snapshots
+
+Save `portwatch list --json` to a UTF-8 file, then run
+`portwatch diff before.json after.json --json`. Omit the second file to compare
+the saved snapshot with a live scan. Added and removed records include process
+start time in their identity, so a restart is visible even if a PID is reused.
+Changed records show before/after metadata for an existing owner.
+
+`diff --exit-code` returns 6 when differences exist and 0 when unchanged; JSON
+output is still written on differences. Invalid snapshots return 2. Input files
+must contain a JSON array of listening TCP records and be at most 10 MiB.

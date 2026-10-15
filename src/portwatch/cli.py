@@ -382,6 +382,9 @@ def compare_snapshots(
         Path | None,
         typer.Argument(exists=True, dir_okay=False, help="Later snapshot; omit to scan now."),
     ] = None,
+    exit_code: Annotated[
+        bool, typer.Option("--exit-code", help="Exit 6 when snapshots differ.")
+    ] = False,
     as_json: Annotated[
         bool, typer.Option("--json", help="Print added, removed, and changed listeners.")
     ] = False,
@@ -400,3 +403,5 @@ def compare_snapshots(
             console.print(Text(f"{kind.title()}: {len(rows)}"))
             for row in rows:
                 console.print(Text(json.dumps(row, ensure_ascii=False)))
+    if exit_code and any(changes.values()):
+        raise typer.Exit(code=6)
