@@ -101,3 +101,9 @@ def test_quiet_lists_unique_ports_without_footer(listeners):
     assert invoke("list", "--quiet") == "3000\n4000\n"
     assert CliRunner().invoke(cli.app, ["list", "--quiet", "--json"]).exit_code == 2
     assert invoke("list", "--quiet", "--search", "missing") == ""
+
+
+def test_count_reports_listeners_after_filtering(listeners):
+    assert invoke("list", "--count", "--ports", "4000") == "2\n"
+    assert invoke("list", "--count", "--search", "missing") == "0\n"
+    assert CliRunner().invoke(cli.app, ["list", "--count", "--csv"]).exit_code == 2
