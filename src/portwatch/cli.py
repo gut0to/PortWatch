@@ -23,7 +23,7 @@ from portwatch.presentation.tables import ports_table, watch_view
 from portwatch.services.port_filters import filter_ports
 from portwatch.services.port_service import PortService
 from portwatch.system.termination import ProcessTerminator
-from portwatch.utils.ports import parse_port_range, validate_port
+from portwatch.utils.ports import parse_port_range, parse_port_selection, validate_port
 from portwatch.web.server import create_server
 
 
@@ -61,6 +61,9 @@ def main(
 @app.command("list")
 @report_system_errors
 def list_ports(
+    selected_ports: Annotated[
+        str | None, typer.Option("--ports", help="Ports and ranges, e.g. 80,3000-3010.")
+    ] = None,
     as_csv: Annotated[bool, typer.Option("--csv", help="Print a CSV snapshot.")] = False,
     descending: Annotated[
         bool, typer.Option("--descending", help="Reverse the sort order.")
@@ -80,12 +83,15 @@ def list_ports(
     if as_csv and as_json:
         _fail("Choose either --json or --csv.", 2)
     try:
+        selection = parse_port_selection(selected_ports) if selected_ports is not None else None
         parsed_range = parse_port_range(port_range) if port_range else None
         ports = filter_ports(
             service.list_ports(parsed_range), search, pid=pid, process=process, project=project
         )
     except InvalidPortError as error:
         _fail(str(error), 2)
+    if selection is not None:
+        ports = [item for item in ports if item.port in selection]
     keys: dict[SortField, Callable[[PortInfo], int | str]] = {
         SortField.port: lambda item: item.port,
         SortField.pid: lambda item: item.pid or 0,

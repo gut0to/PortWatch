@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from typer.testing import CliRunner
 
@@ -40,3 +42,10 @@ def test_port_selection_union():
     for value in ("", "1,", "0", "2-1", "x", "1" * 4097):
         with pytest.raises(InvalidPortError):
             parse_port_selection(value)
+
+
+def test_list_selection(listeners):
+    assert [
+        item["pid"] for item in json.loads(invoke("list", "--ports", "4000,5000-5001", "--json"))
+    ] == [20, 30]
+    assert CliRunner().invoke(cli.app, ["list", "--ports", "0"]).exit_code == 2
