@@ -35,12 +35,15 @@ class PsutilNetworkScanner:
             if port is None:
                 continue
             protocol = "tcp"
-            key = (port, protocol, connection.pid)
+            pid = connection.pid
+            if isinstance(pid, bool) or not isinstance(pid, int) or pid <= 0:
+                pid = None
+            key = (port, protocol, pid)
             ports[key] = PortInfo(
                 port=port,
                 protocol=protocol,
                 status="LISTENING",
-                pid=connection.pid,
+                pid=pid,
             )
         return sorted(ports.values(), key=lambda item: (item.port, item.protocol, item.pid or 0))
 

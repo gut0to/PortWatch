@@ -54,3 +54,18 @@ def test_non_stream_records_are_never_exposed_as_tcp_listeners(monkeypatch):
     )
     monkeypatch.setattr(PsutilNetworkScanner, "_connections", staticmethod(lambda: [entry]))
     assert PsutilNetworkScanner().list_listening_ports() == []
+
+
+@pytest.mark.parametrize("pid", [0, -1, True, None, "42"])
+def test_unusable_socket_owners_remain_unresolved(monkeypatch, pid):
+    import socket
+
+    import psutil
+
+    from portwatch.system.network import PsutilNetworkScanner
+
+    entry = SimpleNamespace(
+        status=psutil.CONN_LISTEN, laddr=("localhost", 3000), type=socket.SOCK_STREAM, pid=pid
+    )
+    monkeypatch.setattr(PsutilNetworkScanner, "_connections", staticmethod(lambda: [entry]))
+    assert PsutilNetworkScanner().list_listening_ports()[0].pid is None
