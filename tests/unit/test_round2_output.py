@@ -120,3 +120,22 @@ def test_tables_preserve_literal_process_and_project_markup():
     )
     assert "[bold]worker[/bold]" in output.getvalue()
     assert "[red]api[/red]" in output.getvalue()
+
+
+def test_termination_confirmation_preserves_literal_names(monkeypatch):
+    monkeypatch.setattr(
+        cli.service,
+        "inspect",
+        lambda port: PortInfo(
+            port,
+            "tcp",
+            "LISTENING",
+            pid=42,
+            process_name="[red]worker[/red]",
+            project_name="[bold]api[/bold]",
+        ),
+    )
+    result = CliRunner().invoke(cli.app, ["free", "3000"], input="n\n")
+    assert result.exit_code == 0
+    assert "[red]worker[/red]" in result.stdout
+    assert "[bold]api[/bold]" in result.stdout

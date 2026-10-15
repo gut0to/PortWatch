@@ -338,8 +338,8 @@ def _terminate_port(
     except PortNotFoundError:
         typer.echo(f"Port {port} is available.")
         return
-    console.print(f"Port {port} is being used by:\n\nProcess: {item.process_name or '-'}")
-    console.print(f"PID: {item.pid or '-'}\nProject: {item.project_name or '-'}\n")
+    console.print(Text(f"Port {port} is being used by:\n\nProcess: {item.process_name or '-'}"))
+    console.print(Text(f"PID: {item.pid or '-'}\nProject: {item.project_name or '-'}\n"))
     if not yes and not typer.confirm(confirm_label, default=False):
         typer.echo("Operation cancelled.")
         return
