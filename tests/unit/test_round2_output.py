@@ -95,3 +95,28 @@ def test_csv_metadata_cannot_be_evaluated_as_formulas(value):
         csv.DictReader(io.StringIO(ports_to_csv([PortInfo(1, "tcp", "LISTENING", command=value)])))
     )
     assert rows[0]["command"] == "'" + value
+
+
+def test_tables_preserve_literal_process_and_project_markup():
+    from io import StringIO
+
+    from rich.console import Console
+
+    from portwatch.presentation.tables import ports_table
+
+    output = StringIO()
+    Console(file=output, width=140, color_system=None).print(
+        ports_table(
+            [
+                PortInfo(
+                    3000,
+                    "tcp",
+                    "LISTENING",
+                    process_name="[bold]worker[/bold]",
+                    project_name="[red]api[/red]",
+                )
+            ]
+        )
+    )
+    assert "[bold]worker[/bold]" in output.getvalue()
+    assert "[red]api[/red]" in output.getvalue()
