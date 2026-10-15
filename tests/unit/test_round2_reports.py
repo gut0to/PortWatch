@@ -61,3 +61,10 @@ def test_summary_command(listeners):
     assert "Listeners: 3" in invoke("summary")
     assert json.loads(invoke("summary", "--search", "missing", "--json"))["listeners"] == 0
     assert CliRunner().invoke(cli.app, ["summary", "--range", "2-1"]).exit_code == 2
+
+
+def test_process_groups(listeners):
+    report = json.loads(invoke("summary", "--group", "process", "--json"))
+    assert report["groups"][0]["name"] == "Python"
+    assert report["groups"][0]["listeners"] == 2
+    assert "Unknown: 1 listeners" in invoke("summary", "--group", "process")

@@ -28,10 +28,15 @@ from portwatch.presentation.serializers import (
 from portwatch.presentation.tables import ports_table, watch_view
 from portwatch.services.port_filters import filter_ports
 from portwatch.services.port_service import PortService
-from portwatch.services.reports import summarize_ports
+from portwatch.services.reports import group_ports, summarize_ports
 from portwatch.system.termination import ProcessTerminator
 from portwatch.utils.ports import parse_port_range, parse_port_selection, validate_port
 from portwatch.web.server import create_server
+
+
+class GroupField(StrEnum):
+    none = "none"
+    process = "process"
 
 
 class SortField(StrEnum):
@@ -333,6 +338,9 @@ def _fail(message: str, code: int) -> NoReturn:
 @app.command()
 @report_system_errors
 def summary(
+    group: Annotated[
+        GroupField, typer.Option("--group", help="Group listener totals.")
+    ] = GroupField.none,
     port_range: Annotated[str | None, typer.Option("--range", help="Inclusive port range.")] = None,
     search: Annotated[str, typer.Option("--search", help="Filter listener metadata.")] = "",
     as_json: Annotated[bool, typer.Option("--json", help="Print JSON totals.")] = False,
@@ -344,8 +352,14 @@ def summary(
     except InvalidPortError as error:
         _fail(str(error), 2)
     totals = summarize_ports(ports)
+    groups = group_ports(ports) if group != GroupField.none else []
+    report: dict[str, object] = dict(totals)
+    if group != GroupField.none:
+        report["groups"] = groups
     if as_json:
-        typer.echo(json.dumps(totals))
+        typer.echo(json.dumps(report))
     else:
         for label, value in totals.items():
             console.print(Text(f"{label.title()}: {value}"))
+        for item in groups:
+            console.print(Text(f"{item['name']}: {item['listeners']} listeners"))
