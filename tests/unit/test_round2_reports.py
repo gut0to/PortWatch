@@ -41,3 +41,16 @@ def test_cli_json_lines(listeners):
     assert [item["port"] for item in rows] == [3000, 4000, 4000]
     assert invoke("list", "--json-lines", "--search", "missing") == ""
     assert CliRunner().invoke(cli.app, ["list", "--json-lines", "--json"]).exit_code == 2
+
+
+def test_summary_distinguishes_unique_ports_and_processes(listeners):
+    from portwatch.services.reports import summarize_ports
+
+    assert summarize_ports(listeners) == {
+        "listeners": 3,
+        "ports": 2,
+        "processes": 1,
+        "projects": 1,
+        "unresolved": 1,
+    }
+    assert all(value == 0 for value in summarize_ports([]).values())
