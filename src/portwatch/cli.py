@@ -61,6 +61,9 @@ def main(
 @app.command("list")
 @report_system_errors
 def list_ports(
+    exclude: Annotated[
+        str | None, typer.Option("--exclude", help="Ports and ranges to exclude.")
+    ] = None,
     selected_ports: Annotated[
         str | None, typer.Option("--ports", help="Ports and ranges, e.g. 80,3000-3010.")
     ] = None,
@@ -83,6 +86,7 @@ def list_ports(
     if as_csv and as_json:
         _fail("Choose either --json or --csv.", 2)
     try:
+        excluded = parse_port_selection(exclude) if exclude is not None else frozenset()
         selection = parse_port_selection(selected_ports) if selected_ports is not None else None
         parsed_range = parse_port_range(port_range) if port_range else None
         ports = filter_ports(
@@ -92,6 +96,7 @@ def list_ports(
         _fail(str(error), 2)
     if selection is not None:
         ports = [item for item in ports if item.port in selection]
+    ports = [item for item in ports if item.port not in excluded]
     keys: dict[SortField, Callable[[PortInfo], int | str]] = {
         SortField.port: lambda item: item.port,
         SortField.pid: lambda item: item.pid or 0,

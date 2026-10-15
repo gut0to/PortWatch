@@ -49,3 +49,9 @@ def test_list_selection(listeners):
         item["pid"] for item in json.loads(invoke("list", "--ports", "4000,5000-5001", "--json"))
     ] == [20, 30]
     assert CliRunner().invoke(cli.app, ["list", "--ports", "0"]).exit_code == 2
+
+
+def test_exclude_combines_with_selection(listeners):
+    result = json.loads(invoke("list", "--ports", "3000-5000", "--exclude", "4000", "--json"))
+    assert [item["port"] for item in result] == [3000]
+    assert CliRunner().invoke(cli.app, ["list", "--exclude", "0"]).exit_code == 2
