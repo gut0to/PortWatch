@@ -25,12 +25,16 @@ class PsutilNetworkScanner:
     def list_listening_ports(self) -> list[PortInfo]:
         ports: dict[tuple[int, str, int | None], PortInfo] = {}
         for connection in self._connections():
-            if connection.status != psutil.CONN_LISTEN or not connection.laddr:
+            if (
+                connection.status != psutil.CONN_LISTEN
+                or not connection.laddr
+                or connection.type != socket.SOCK_STREAM
+            ):
                 continue
             port = self._port_from_address(connection.laddr)
             if port is None:
                 continue
-            protocol = "tcp" if connection.type == socket.SOCK_STREAM else "udp"
+            protocol = "tcp"
             key = (port, protocol, connection.pid)
             ports[key] = PortInfo(
                 port=port,

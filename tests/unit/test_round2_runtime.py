@@ -40,3 +40,17 @@ def test_elapsed_time_accepts_timezone_aware_snapshots():
 
     assert "2m" in format_started(datetime.now(UTC) - timedelta(minutes=2, seconds=3))
     assert format_started(datetime.now(UTC) + timedelta(days=1)) == "0s ago"
+
+
+def test_non_stream_records_are_never_exposed_as_tcp_listeners(monkeypatch):
+    import socket
+
+    import psutil
+
+    from portwatch.system.network import PsutilNetworkScanner
+
+    entry = SimpleNamespace(
+        status=psutil.CONN_LISTEN, laddr=("localhost", 3000), type=socket.SOCK_DGRAM, pid=42
+    )
+    monkeypatch.setattr(PsutilNetworkScanner, "_connections", staticmethod(lambda: [entry]))
+    assert PsutilNetworkScanner().list_listening_ports() == []
