@@ -61,6 +61,9 @@ def main(
 @app.command("list")
 @report_system_errors
 def list_ports(
+    exact: Annotated[
+        bool, typer.Option("--exact", help="Match process and project names exactly.")
+    ] = False,
     exclude: Annotated[
         str | None, typer.Option("--exclude", help="Ports and ranges to exclude.")
     ] = None,
@@ -90,7 +93,12 @@ def list_ports(
         selection = parse_port_selection(selected_ports) if selected_ports is not None else None
         parsed_range = parse_port_range(port_range) if port_range else None
         ports = filter_ports(
-            service.list_ports(parsed_range), search, pid=pid, process=process, project=project
+            service.list_ports(parsed_range),
+            search,
+            pid=pid,
+            process=process,
+            project=project,
+            exact=exact,
         )
     except InvalidPortError as error:
         _fail(str(error), 2)

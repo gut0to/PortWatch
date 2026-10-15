@@ -75,3 +75,10 @@ def test_exact_filters_distinguish_related_processes(listeners):
     assert [item.pid for item in filter_ports(listeners, process="PYTHON", exact=True)] == [10]
     assert [item.pid for item in filter_ports(listeners, project="api", exact=True)] == [10]
     assert len(filter_ports(listeners, process="python")) == 2
+
+
+def test_cli_exact_filter(listeners):
+    result = json.loads(
+        invoke("list", "--process", "python", "--project", "API", "--exact", "--json")
+    )
+    assert [item["pid"] for item in result] == [10]
