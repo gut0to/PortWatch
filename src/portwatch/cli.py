@@ -30,7 +30,7 @@ from portwatch.presentation.tables import ports_table, watch_view
 from portwatch.services.port_filters import filter_ports
 from portwatch.services.port_service import PortService
 from portwatch.services.reports import group_ports, summarize_ports
-from portwatch.services.snapshots import diff_snapshots, load_snapshot
+from portwatch.services.snapshots import diff_snapshots, load_snapshot, write_snapshot
 from portwatch.system.termination import ProcessTerminator
 from portwatch.utils.ports import parse_port_range, parse_port_selection, validate_port
 from portwatch.web.server import create_server
@@ -76,6 +76,12 @@ def main(
 @app.command("list")
 @report_system_errors
 def list_ports(
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Write a UTF-8 snapshot file.")
+    ] = None,
+    overwrite: Annotated[
+        bool, typer.Option("--overwrite", help="Replace an existing output file.")
+    ] = False,
     json_lines: Annotated[
         bool, typer.Option("--json-lines", help="One JSON listener per line.")
     ] = False,
@@ -116,6 +122,10 @@ def list_ports(
     ] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Print machine-readable JSON.")] = False,
 ) -> None:
+    if overwrite and output is None:
+        _fail("--overwrite requires --output.", 2)
+    if output is not None and (quiet or count_only):
+        _fail("--output requires JSON, JSON Lines, or CSV output.", 2)
     if sum((as_csv, as_json, quiet, count_only, json_lines)) > 1:
         _fail("Choose only one output format: --json, --csv, --quiet, --count, or --json-lines.", 2)
     try:
@@ -145,6 +155,17 @@ def list_ports(
     ports = ports[offset:]
     if limit:
         ports = ports[:limit]
+    if output is not None:
+        content = (
+            ports_to_csv(ports)
+            if as_csv
+            else (ports_to_json_lines(ports) if json_lines else ports_to_json(ports))
+        )
+        try:
+            write_snapshot(output, content, overwrite=overwrite)
+        except FileExistsError:
+            _fail("The output file already exists. Use --overwrite to replace it.", 2)
+        return
     if json_lines:
         if ports:
             typer.echo(ports_to_json_lines(ports))

@@ -1,6 +1,8 @@
 """Validate portable listener snapshots and compare their process identities."""
 
 import json
+import os
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import cast
@@ -84,3 +86,30 @@ def diff_snapshots(
             port_to_dict(previous[key]) for key in sorted(previous.keys() - current.keys())
         ],
     }
+
+
+def write_snapshot(path: Path, content: str, *, overwrite: bool = False) -> None:
+    """Publish a complete UTF-8 snapshot; existing files require explicit replacement."""
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        encoding="utf-8",
+        newline="\n",
+        dir=path.parent,
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+        delete=False,
+    ) as output:
+        temporary = Path(output.name)
+        try:
+            output.write(content + "\n")
+        except BaseException:
+            output.close()
+            temporary.unlink(missing_ok=True)
+            raise
+    try:
+        if overwrite:
+            os.replace(temporary, path)
+        else:
+            os.link(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)

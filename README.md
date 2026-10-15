@@ -184,3 +184,9 @@ Changed records show before/after metadata for an existing owner.
 `diff --exit-code` returns 6 when differences exist and 0 when unchanged; JSON
 output is still written on differences. Invalid snapshots return 2. Input files
 must contain a JSON array of listening TCP records and be at most 10 MiB.
+
+
+`portwatch list --output ports.json` writes a complete UTF-8 JSON snapshot
+without emitting a table. Select `--csv` or `--json-lines` for those file formats.
+The parent directory must exist. Existing files are preserved unless you pass
+`--overwrite`; publication uses a temporary file in the destination directory.
