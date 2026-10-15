@@ -17,6 +17,8 @@ from portwatch.web.assets import read_static_asset
 from portwatch.web.request_data import (
     MAX_PORT,
     MAX_REQUEST_BYTES,
+    finite_json_float,
+    reject_json_constant,
     single_port_parameter,
     unique_json_object,
 )
@@ -41,6 +43,9 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
     def setup(self) -> None:
         self.request.settimeout(10)
         super().setup()
+
+    def do_HEAD(self) -> None:
+        self.do_GET()
 
     def do_GET(self) -> None:
         if not self._has_expected_host():
@@ -133,15 +138,25 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
     def _read_json_body(self) -> dict[str, object]:
         if self.headers.get_content_type() != "application/json":
             raise ValueError("The request must use JSON.")
-        raw_length = self.headers.get("Content-Length", "")
-        if not raw_length.isdecimal():
+        if self.headers.get("Transfer-Encoding") is not None:
+            raise ValueError("Transfer-encoded action bodies are not supported.")
+        lengths = self.headers.get_all("Content-Length", [])
+        if len(lengths) != 1:
+            raise ValueError("Exactly one Content-Length header is required.")
+        raw_length = lengths[0]
+        if not 1 <= len(raw_length) <= 4 or not raw_length.isascii() or not raw_length.isdecimal():
             raise ValueError("A JSON request body is required.")
         length = int(raw_length)
         if length == 0:
             raise ValueError("A JSON request body is required.")
         if length > MAX_REQUEST_BYTES:
             raise ValueError("The request is too large.")
-        data = json.loads(self.rfile.read(length), object_pairs_hook=unique_json_object)
+        data = json.loads(
+            self.rfile.read(length),
+            object_pairs_hook=unique_json_object,
+            parse_constant=reject_json_constant,
+            parse_float=finite_json_float,
+        )
         if not isinstance(data, dict):
             raise ValueError("The request body must be a JSON object.")
         return cast(dict[str, object], data)
@@ -158,7 +173,8 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self._security_headers()
         self.end_headers()
-        self.wfile.write(body)
+        if self.command != "HEAD":
+            self.wfile.write(body)
 
     def _send_json(self, status: HTTPStatus, data: object) -> None:
         body = json.dumps(data, separators=(",", ":")).encode("utf-8")
@@ -167,7 +183,8 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self._security_headers()
         self.end_headers()
-        self.wfile.write(body)
+        if self.command != "HEAD":
+            self.wfile.write(body)
 
     def _send_error(self, status: HTTPStatus, message: str) -> None:
         self._send_json(status, {"error": message})

@@ -27,8 +27,8 @@ def ports_table(ports: list[PortInfo]) -> Table:
             str(item.port),
             item.protocol.upper(),
             str(item.pid or "-"),
-            item.process_name or "-",
-            item.project_name or "-",
+            Text(item.process_name or "-"),
+            Text(item.project_name or "-"),
         )
     return table
 

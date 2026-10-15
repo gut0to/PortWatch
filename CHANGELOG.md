@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Snapshot and monitoring improvements
+
+- Select or exclude disjoint port ranges; combine search terms and exclusions.
+- Add exact process/project matching, pagination, quiet/count output, and JSON Lines.
+- Add summaries with process/project groups and validated snapshot comparison.
+- Save complete UTF-8 snapshots with explicit overwrite and optional metadata redaction.
+- Clean temporary exports after write/close failures and keep empty JSON Lines files empty.
+- Add snapshot-difference exit status 6, bounded free-port batches, and JSON watch streams.
+- Suppress unchanged watch snapshots and apply shared metadata filters to monitoring.
+- Preserve literal names and command argument boundaries in process presentation.
+- Handle timezone-aware and invalid timestamps and malformed socket owners safely.
+- Neutralize spreadsheet formulas in CSV metadata.
+- Support HEAD requests and reject ambiguous framing and non-finite action JSON.
+
+
 ### Added
 
 - CLI listener search and combined PID, process, and project filters.

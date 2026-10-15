@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+
 MAX_REQUEST_BYTES = 4096
 MAX_PORT = 65535
 
@@ -27,3 +29,14 @@ def unique_json_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
             raise ValueError(f"Duplicate JSON field: {key}.")
         result[key] = value
     return result
+
+
+def reject_json_constant(value: str) -> object:
+    raise ValueError(f"Non-finite JSON numbers are not supported: {value}.")
+
+
+def finite_json_float(value: str) -> float:
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError("Non-finite JSON numbers are not supported.")
+    return number

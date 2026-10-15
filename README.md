@@ -149,3 +149,69 @@ after the MVP stabilizes.
 ## License
 
 MIT.
+
+
+### Targeted listener queries
+
+`list --ports 80,443,3000-3010 --exclude 3005` selects disjoint ports and ranges.
+`--search "python api -worker"` requires every positive term and excludes metadata
+containing `worker`. Process and project filters support `--exact` for full-name
+matching. All matching is case-insensitive.
+
+Use `--offset N --limit N` to paginate after sorting. `--quiet` prints unique port
+numbers; `--count` prints the number of listener records (owners sharing a port
+are separate records). `--json-lines` emits one listener object per line and no
+output for an empty result. These formats cannot be combined with each other,
+`--json`, or `--csv`.
+
+
+### Listener summaries
+
+`portwatch summary` reports listener records, unique ports, process IDs, detected
+project names, and unresolved owners. Add `--json` for scripts, `--range` or
+`--search` to narrow the snapshot, and `--group process` or `--group project` for
+per-name totals. Missing names appear in the `Unknown` group.
+
+
+### Comparing snapshots
+
+Save `portwatch list --json` to a UTF-8 file, then run
+`portwatch diff before.json after.json --json`. Omit the second file to compare
+the saved snapshot with a live scan. Added and removed records include process
+start time in their identity, so a restart is visible even if a PID is reused.
+Changed records show before/after metadata for an existing owner.
+
+`diff --exit-code` returns 6 when differences exist and 0 when unchanged; JSON
+output is still written on differences. Invalid snapshots return 2. Input files
+must contain a JSON array of listening TCP records and be at most 10 MiB.
+
+
+`portwatch list --output ports.json` writes a complete UTF-8 JSON snapshot
+without emitting a table. Select `--csv` or `--json-lines` for those file formats.
+The parent directory must exist. Existing files are preserved unless you pass
+`--overwrite`; publication uses a temporary file in the destination directory.
+
+
+Add `list --redact` to remove command lines and working-directory paths from
+the resulting output. Filtering uses the original metadata first. Process names,
+project names, PIDs, and timestamps remain available; review them before sharing.
+
+
+CSV text fields beginning with spreadsheet formula prefixes are prefixed with
+an apostrophe. JSON and JSON Lines preserve their original text.
+
+
+### Scripted monitoring and free-port batches
+
+`portwatch next 3000 --end 4000 --count 3 --json` finds three free TCP port
+numbers in one scan. All requested ports must fit in the inclusive range;
+otherwise the command exits with 3. A single-port request retains the existing
+`start`, `port`, and `available` JSON fields; batches return `start` and `ports`.
+These results do not reserve sockets.
+
+`portwatch watch --json --count 10 --changes-only --search "api -worker"`
+streams a JSON object containing `ports` and `scanned_at` for each changed
+snapshot. The first snapshot is always emitted, including when empty. `--count`
+counts scan attempts, including suppressed duplicates. Reordering alone is not
+a change. Watch accepts the same `--pid`, `--process`, and `--project` filters
+as listener queries.

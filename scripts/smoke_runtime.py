@@ -99,6 +99,39 @@ def verify_runtime(command: list[str]) -> None:
             inspected = json.loads(run("inspect", str(port), "--json"))
             assert inspected["pid"] == fixture_pid
             assert int(run("next", str(port))) > port
+            batch = json.loads(run("next", str(port), "--count", "2", "--json"))["ports"]
+            assert len(set(batch)) == 2 and all(candidate > port for candidate in batch)
+            rows = [
+                json.loads(line)
+                for line in run("list", "--ports", str(port), "--json-lines").splitlines()
+            ]
+            assert any(item["pid"] == fixture_pid for item in rows)
+            assert run("list", "--ports", str(port), "--quiet").strip() == str(port)
+            totals = json.loads(run("summary", "--range", f"{port}-{port}", "--json"))
+            assert totals["listeners"] >= 1 and totals["ports"] == 1
+            snapshot = Path(working_directory, "ports.json")
+            assert not run("list", "--ports", str(port), "--redact", "--output", str(snapshot))
+            saved = json.loads(snapshot.read_text(encoding="utf-8"))
+            assert saved and all(item["command"] is None for item in saved)
+            changes = json.loads(run("diff", str(snapshot), str(snapshot), "--json", "--exit-code"))
+            assert not any(changes.values())
+            watched = [
+                json.loads(line)
+                for line in run(
+                    "watch",
+                    "--range",
+                    f"{port}-{port}",
+                    "--json",
+                    "--count",
+                    "2",
+                    "--interval",
+                    "0.2",
+                ).splitlines()
+            ]
+            assert len(watched) == 2
+            assert all(
+                any(item["pid"] == fixture_pid for item in scan["ports"]) for scan in watched
+            )
             with socket.socket() as reservation:
                 reservation.bind(("127.0.0.1", 0))
                 dashboard_port = reservation.getsockname()[1]

@@ -22,3 +22,15 @@ def parse_port_range(value: str) -> PortRange:
     if start > end:
         raise InvalidPortError("Range start must be less than or equal to its end.")
     return PortRange(start, end)
+
+
+def parse_port_selection(value: str) -> frozenset[int]:
+    """Parse a bounded comma-separated union of ports and inclusive ranges."""
+    if not value or len(value) > 4096:
+        raise InvalidPortError("Use a comma-separated port selection of at most 4096 characters.")
+    selected: set[int] = set()
+    for part in value.split(","):
+        part = part.strip()
+        bounds = parse_port_range(part if "-" in part else f"{part}-{part}")
+        selected.update(range(bounds.start, bounds.end + 1))
+    return frozenset(selected)
