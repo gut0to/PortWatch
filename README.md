@@ -163,3 +163,11 @@ numbers; `--count` prints the number of listener records (owners sharing a port
 are separate records). `--json-lines` emits one listener object per line and no
 output for an empty result. These formats cannot be combined with each other,
 `--json`, or `--csv`.
+
+
+### Listener summaries
+
+`portwatch summary` reports listener records, unique ports, process IDs, detected
+project names, and unresolved owners. Add `--json` for scripts, `--range` or
+`--search` to narrow the snapshot, and `--group process` or `--group project` for
+per-name totals. Missing names appear in the `Unknown` group.

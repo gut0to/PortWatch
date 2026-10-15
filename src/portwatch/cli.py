@@ -37,6 +37,7 @@ from portwatch.web.server import create_server
 class GroupField(StrEnum):
     none = "none"
     process = "process"
+    project = "project"
 
 
 class SortField(StrEnum):
@@ -352,7 +353,11 @@ def summary(
     except InvalidPortError as error:
         _fail(str(error), 2)
     totals = summarize_ports(ports)
-    groups = group_ports(ports) if group != GroupField.none else []
+    groups = (
+        group_ports(ports, "project_name" if group == GroupField.project else "process_name")
+        if group != GroupField.none
+        else []
+    )
     report: dict[str, object] = dict(totals)
     if group != GroupField.none:
         report["groups"] = groups

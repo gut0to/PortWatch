@@ -68,3 +68,12 @@ def test_process_groups(listeners):
     assert report["groups"][0]["name"] == "Python"
     assert report["groups"][0]["listeners"] == 2
     assert "Unknown: 1 listeners" in invoke("summary", "--group", "process")
+
+
+def test_project_groups_preserve_unknown_owners(listeners):
+    report = json.loads(invoke("summary", "--group", "project", "--json"))
+    assert [(item["name"], item["listeners"]) for item in report["groups"]] == [
+        ("API", 2),
+        ("Unknown", 1),
+    ]
+    assert "API: 2 listeners" in invoke("summary", "--group", "project")
