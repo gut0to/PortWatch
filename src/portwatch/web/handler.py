@@ -42,6 +42,9 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         self.request.settimeout(10)
         super().setup()
 
+    def do_HEAD(self) -> None:
+        self.do_GET()
+
     def do_GET(self) -> None:
         if not self._has_expected_host():
             self._send_error(HTTPStatus.FORBIDDEN, "This dashboard is available on localhost only.")
@@ -158,7 +161,8 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self._security_headers()
         self.end_headers()
-        self.wfile.write(body)
+        if self.command != "HEAD":
+            self.wfile.write(body)
 
     def _send_json(self, status: HTTPStatus, data: object) -> None:
         body = json.dumps(data, separators=(",", ":")).encode("utf-8")
@@ -167,7 +171,8 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self._security_headers()
         self.end_headers()
-        self.wfile.write(body)
+        if self.command != "HEAD":
+            self.wfile.write(body)
 
     def _send_error(self, status: HTTPStatus, message: str) -> None:
         self._send_json(status, {"error": message})
