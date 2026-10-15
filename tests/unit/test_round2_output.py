@@ -82,3 +82,16 @@ def test_redaction_preserves_identity_and_original_snapshot(monkeypatch):
     assert "secret-token" not in result.stdout
     assert json.loads(result.stdout)[0]["pid"] == 42
     assert original.command == "secret-token"
+
+
+@pytest.mark.parametrize("value", ["=SUM(1,2)", "+1", "-1", "@cmd", "  =1"])
+def test_csv_metadata_cannot_be_evaluated_as_formulas(value):
+    import csv
+    import io
+
+    from portwatch.presentation.serializers import ports_to_csv
+
+    rows = list(
+        csv.DictReader(io.StringIO(ports_to_csv([PortInfo(1, "tcp", "LISTENING", command=value)])))
+    )
+    assert rows[0]["command"] == "'" + value

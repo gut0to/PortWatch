@@ -195,3 +195,7 @@ The parent directory must exist. Existing files are preserved unless you pass
 Add `list --redact` to remove command lines and working-directory paths from
 the resulting output. Filtering uses the original metadata first. Process names,
 project names, PIDs, and timestamps remain available; review them before sharing.
+
+
+CSV text fields beginning with spreadsheet formula prefixes are prefixed with
+an apostrophe. JSON and JSON Lines preserve their original text.

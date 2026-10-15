@@ -22,10 +22,18 @@ def ports_to_csv(ports: list[PortInfo]) -> str:
     fields = list(PortInfo.__dataclass_fields__)
     writer = csv.DictWriter(output, fieldnames=fields, lineterminator="\n")
     writer.writeheader()
-    writer.writerows(port_to_dict(item) for item in ports)
+    writer.writerows(
+        {key: _csv_value(value) for key, value in port_to_dict(item).items()} for item in ports
+    )
     return output.getvalue().rstrip("\n")
 
 
 def ports_to_json_lines(ports: list[PortInfo]) -> str:
     """Emit one complete listener object per line, with no array wrapper."""
     return "\n".join(json.dumps(port_to_dict(item), separators=(",", ":")) for item in ports)
+
+
+def _csv_value(value: object) -> object:
+    if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@", "\t", "\r")):
+        return "'" + value
+    return value
