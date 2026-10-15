@@ -131,3 +131,21 @@ def test_json_watch_is_bounded_and_machine_readable(monkeypatch):
     assert len(rows) == 2
     assert rows[0]["ports"][0]["port"] == 3000
     sleep.assert_called_once_with(2.0)
+
+
+def test_watch_changes_ignore_order_and_count_attempts(monkeypatch):
+    from portwatch.services.monitoring import watch_snapshots
+
+    first = PortInfo(1, "tcp", "LISTENING")
+    second = PortInfo(2, "tcp", "LISTENING")
+    scans = Mock(side_effect=[[first, second], [second, first], [], []])
+    sleep = Mock()
+    assert list(watch_snapshots(scans, 0.2, 4, changes_only=True, sleep=sleep)) == [
+        [first, second],
+        [],
+    ]
+    assert sleep.call_count == 3
+    monkeypatch.setattr(cli.service, "list_ports", lambda bounds=None: [])
+    monkeypatch.setattr(cli.time, "sleep", Mock())
+    result = CliRunner().invoke(cli.app, ["watch", "--count", "3", "--changes-only", "--json"])
+    assert len(result.stdout.splitlines()) == 1

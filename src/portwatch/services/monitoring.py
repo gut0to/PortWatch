@@ -11,11 +11,17 @@ def watch_snapshots(
     interval: float,
     count: int,
     *,
+    changes_only: bool = False,
     sleep: Callable[[float], None] = time.sleep,
 ) -> Iterator[list[PortInfo]]:
+    previous: frozenset[PortInfo] | None = None
     scans = 0
     while True:
-        yield scan()
+        ports = scan()
+        signature = frozenset(ports)
+        if not changes_only or signature != previous:
+            yield ports
+        previous = signature
         scans += 1
         if count and scans >= count:
             return

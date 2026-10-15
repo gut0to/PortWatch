@@ -286,6 +286,9 @@ def free(
 @app.command()
 @report_system_errors
 def watch(
+    changes_only: Annotated[
+        bool, typer.Option("--changes-only", help="Emit only changed snapshots.")
+    ] = False,
     as_json: Annotated[
         bool, typer.Option("--json", help="Stream one JSON snapshot per scan.")
     ] = False,
@@ -306,7 +309,11 @@ def watch(
     except InvalidPortError as error:
         _fail(str(error), 2)
     snapshots = watch_snapshots(
-        lambda: service.list_ports(parsed_range), interval, count, sleep=time.sleep
+        lambda: service.list_ports(parsed_range),
+        interval,
+        count,
+        changes_only=changes_only,
+        sleep=time.sleep,
     )
     try:
         if as_json:
