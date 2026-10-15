@@ -61,3 +61,9 @@ def test_search_terms_can_match_different_fields(listeners):
     result = json.loads(invoke("list", "--search", "python 3000", "--json"))
     assert [item["pid"] for item in result] == [10]
     assert json.loads(invoke("list", "--search", "python missing", "--json")) == []
+
+
+def test_search_can_exclude_metadata_terms(listeners):
+    result = json.loads(invoke("list", "--search", "python -worker", "--json"))
+    assert [item["pid"] for item in result] == [10]
+    assert len(json.loads(invoke("list", "--search=-missing", "--json"))) == 3

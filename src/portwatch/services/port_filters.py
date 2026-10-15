@@ -37,4 +37,9 @@ def _matches_terms(item: PortInfo, terms: list[str]) -> bool:
         )
         if value is not None
     ]
-    return all(any(term in value for value in values) for term in terms)
+    return all(
+        not any(term[1:] in value for value in values)
+        if term.startswith("-") and len(term) > 1
+        else any(term in value for value in values)
+        for term in terms
+    )
