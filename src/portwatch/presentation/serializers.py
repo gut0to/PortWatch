@@ -24,3 +24,8 @@ def ports_to_csv(ports: list[PortInfo]) -> str:
     writer.writeheader()
     writer.writerows(port_to_dict(item) for item in ports)
     return output.getvalue().rstrip("\n")
+
+
+def ports_to_json_lines(ports: list[PortInfo]) -> str:
+    """Emit one complete listener object per line, with no array wrapper."""
+    return "\n".join(json.dumps(port_to_dict(item), separators=(",", ":")) for item in ports)
