@@ -61,6 +61,9 @@ def main(
 @app.command("list")
 @report_system_errors
 def list_ports(
+    offset: Annotated[
+        int, typer.Option("--offset", min=0, help="Skip sorted results before limiting.")
+    ] = 0,
     limit: Annotated[
         int, typer.Option("--limit", min=0, help="Maximum results; 0 returns all.")
     ] = 0,
@@ -115,6 +118,7 @@ def list_ports(
         SortField.project: lambda item: (item.project_name or "").casefold(),
     }
     ports = sorted(ports, key=keys[sort], reverse=descending)
+    ports = ports[offset:]
     if limit:
         ports = ports[:limit]
     if as_csv:

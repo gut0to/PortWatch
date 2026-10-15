@@ -89,3 +89,9 @@ def test_list_limit_after_sort(listeners):
     assert [item["port"] for item in result] == [4000]
     assert len(json.loads(invoke("list", "--limit", "0", "--json"))) == 3
     assert CliRunner().invoke(cli.app, ["list", "--limit", "-1"]).exit_code == 2
+
+
+def test_list_offset_and_limit(listeners):
+    result = json.loads(invoke("list", "--offset", "1", "--limit", "1", "--json"))
+    assert [item["pid"] for item in result] == [20]
+    assert json.loads(invoke("list", "--offset", "20", "--json")) == []
