@@ -55,3 +55,9 @@ def test_exclude_combines_with_selection(listeners):
     result = json.loads(invoke("list", "--ports", "3000-5000", "--exclude", "4000", "--json"))
     assert [item["port"] for item in result] == [3000]
     assert CliRunner().invoke(cli.app, ["list", "--exclude", "0"]).exit_code == 2
+
+
+def test_search_terms_can_match_different_fields(listeners):
+    result = json.loads(invoke("list", "--search", "python 3000", "--json"))
+    assert [item["pid"] for item in result] == [10]
+    assert json.loads(invoke("list", "--search", "python missing", "--json")) == []
