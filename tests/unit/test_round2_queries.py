@@ -95,3 +95,9 @@ def test_list_offset_and_limit(listeners):
     result = json.loads(invoke("list", "--offset", "1", "--limit", "1", "--json"))
     assert [item["pid"] for item in result] == [20]
     assert json.loads(invoke("list", "--offset", "20", "--json")) == []
+
+
+def test_quiet_lists_unique_ports_without_footer(listeners):
+    assert invoke("list", "--quiet") == "3000\n4000\n"
+    assert CliRunner().invoke(cli.app, ["list", "--quiet", "--json"]).exit_code == 2
+    assert invoke("list", "--quiet", "--search", "missing") == ""
