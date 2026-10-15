@@ -91,29 +91,26 @@ def diff_snapshots(
 
 def write_snapshot(path: Path, content: str, *, overwrite: bool = False) -> None:
     """Publish a complete UTF-8 snapshot; existing files require explicit replacement."""
-    with tempfile.NamedTemporaryFile(
-        mode="w",
-        encoding="utf-8",
-        newline="\n",
-        dir=path.parent,
-        prefix=f".{path.name}.",
-        suffix=".tmp",
-        delete=False,
-    ) as output:
-        temporary = Path(output.name)
-        try:
-            output.write(content + "\n")
-        except BaseException:
-            output.close()
-            temporary.unlink(missing_ok=True)
-            raise
+    temporary: Path | None = None
     try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            newline="\n",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as output:
+            temporary = Path(output.name)
+            output.write(content + ("\n" if content else ""))
         if overwrite:
             os.replace(temporary, path)
         else:
             os.link(temporary, path)
     finally:
-        temporary.unlink(missing_ok=True)
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
 
 def redact_snapshot(ports: list[PortInfo]) -> list[PortInfo]:

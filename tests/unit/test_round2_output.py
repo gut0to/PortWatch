@@ -49,6 +49,45 @@ def test_output_write_failure_cleans_temporary_file(tmp_path, monkeypatch):
     assert list(tmp_path.iterdir()) == []
 
 
+def test_output_close_failure_cleans_temporary_file(tmp_path, monkeypatch):
+    import portwatch.services.snapshots as snapshots
+
+    real = snapshots.tempfile.NamedTemporaryFile
+
+    class FailingClose:
+        def __init__(self, **kwargs):
+            self.handle = real(**kwargs)
+
+        def __enter__(self):
+            return self.handle.__enter__()
+
+        def __exit__(self, *args):
+            self.handle.__exit__(*args)
+            raise OSError("flush failed")
+
+    monkeypatch.setattr(snapshots.tempfile, "NamedTemporaryFile", FailingClose)
+    with pytest.raises(OSError, match="flush failed"):
+        write_snapshot(tmp_path / "ports.json", "[]")
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_output_creation_failure_does_not_publish_a_file(tmp_path, monkeypatch):
+    import portwatch.services.snapshots as snapshots
+
+    monkeypatch.setattr(
+        snapshots.tempfile, "NamedTemporaryFile", Mock(side_effect=PermissionError("denied"))
+    )
+    with pytest.raises(PermissionError):
+        write_snapshot(tmp_path / "ports.json", "[]")
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_empty_json_lines_snapshot_is_an_empty_file(tmp_path):
+    path = tmp_path / "ports.jsonl"
+    write_snapshot(path, "")
+    assert path.read_bytes() == b""
+
+
 def test_cli_snapshot_output_formats_and_overwrite(tmp_path, monkeypatch):
     monkeypatch.setattr(
         cli.service, "list_ports", lambda bounds=None: [PortInfo(3000, "tcp", "LISTENING")]

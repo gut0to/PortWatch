@@ -17,6 +17,8 @@ from portwatch.web.assets import read_static_asset
 from portwatch.web.request_data import (
     MAX_PORT,
     MAX_REQUEST_BYTES,
+    finite_json_float,
+    reject_json_constant,
     single_port_parameter,
     unique_json_object,
 )
@@ -149,7 +151,12 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             raise ValueError("A JSON request body is required.")
         if length > MAX_REQUEST_BYTES:
             raise ValueError("The request is too large.")
-        data = json.loads(self.rfile.read(length), object_pairs_hook=unique_json_object)
+        data = json.loads(
+            self.rfile.read(length),
+            object_pairs_hook=unique_json_object,
+            parse_constant=reject_json_constant,
+            parse_float=finite_json_float,
+        )
         if not isinstance(data, dict):
             raise ValueError("The request body must be a JSON object.")
         return cast(dict[str, object], data)

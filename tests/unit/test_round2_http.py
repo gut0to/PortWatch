@@ -56,3 +56,16 @@ def test_action_framing_is_unambiguous_and_bounded(headers):
 
 def test_action_framing_accepts_a_single_bounded_length():
     assert body_handler([("Content-Length", "2")])._read_json_body() == {}
+
+
+@pytest.mark.parametrize("constant", ["NaN", "Infinity", "-Infinity", "1e9999", "-1e9999"])
+def test_action_json_rejects_nonfinite_numbers_even_in_unused_fields(constant):
+    body = ('{"pid":42,"extra":' + constant + "}").encode()
+    with pytest.raises(ValueError, match="Non-finite JSON"):
+        body_handler([("Content-Length", str(len(body)))], body)._read_json_body()
+
+
+def test_action_json_accepts_finite_numeric_metadata():
+    body = b'{"pid":42,"extra":1.25}'
+    payload = body_handler([("Content-Length", str(len(body)))], body)._read_json_body()
+    assert payload == {"pid": 42, "extra": 1.25}
