@@ -9,6 +9,7 @@ from typing import Annotated, NoReturn
 import typer
 from rich.console import Console
 from rich.live import Live
+from rich.text import Text
 
 from portwatch.domain.exceptions import (
     InvalidPortError,
@@ -27,6 +28,7 @@ from portwatch.presentation.serializers import (
 from portwatch.presentation.tables import ports_table, watch_view
 from portwatch.services.port_filters import filter_ports
 from portwatch.services.port_service import PortService
+from portwatch.services.reports import summarize_ports
 from portwatch.system.termination import ProcessTerminator
 from portwatch.utils.ports import parse_port_range, parse_port_selection, validate_port
 from portwatch.web.server import create_server
@@ -326,3 +328,24 @@ def _terminate_port(
 def _fail(message: str, code: int) -> NoReturn:
     typer.echo(message, err=True)
     raise typer.Exit(code=code)
+
+
+@app.command()
+@report_system_errors
+def summary(
+    port_range: Annotated[str | None, typer.Option("--range", help="Inclusive port range.")] = None,
+    search: Annotated[str, typer.Option("--search", help="Filter listener metadata.")] = "",
+    as_json: Annotated[bool, typer.Option("--json", help="Print JSON totals.")] = False,
+) -> None:
+    """Summarize local TCP listeners without counting duplicate owners twice."""
+    try:
+        bounds = parse_port_range(port_range) if port_range else None
+        ports = filter_ports(service.list_ports(bounds), search)
+    except InvalidPortError as error:
+        _fail(str(error), 2)
+    totals = summarize_ports(ports)
+    if as_json:
+        typer.echo(json.dumps(totals))
+    else:
+        for label, value in totals.items():
+            console.print(Text(f"{label.title()}: {value}"))

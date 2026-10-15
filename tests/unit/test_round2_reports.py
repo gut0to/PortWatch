@@ -54,3 +54,10 @@ def test_summary_distinguishes_unique_ports_and_processes(listeners):
         "unresolved": 1,
     }
     assert all(value == 0 for value in summarize_ports([]).values())
+
+
+def test_summary_command(listeners):
+    assert json.loads(invoke("summary", "--json"))["processes"] == 1
+    assert "Listeners: 3" in invoke("summary")
+    assert json.loads(invoke("summary", "--search", "missing", "--json"))["listeners"] == 0
+    assert CliRunner().invoke(cli.app, ["summary", "--range", "2-1"]).exit_code == 2
