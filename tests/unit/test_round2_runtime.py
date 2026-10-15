@@ -149,3 +149,33 @@ def test_watch_changes_ignore_order_and_count_attempts(monkeypatch):
     monkeypatch.setattr(cli.time, "sleep", Mock())
     result = CliRunner().invoke(cli.app, ["watch", "--count", "3", "--changes-only", "--json"])
     assert len(result.stdout.splitlines()) == 1
+
+
+def test_watch_metadata_filters_use_shared_semantics(monkeypatch):
+    monkeypatch.setattr(
+        cli.service,
+        "list_ports",
+        lambda bounds=None: [
+            PortInfo(3000, "tcp", "LISTENING", pid=42, process_name="python", project_name="API"),
+            PortInfo(4000, "tcp", "LISTENING", pid=43, process_name="worker", project_name="API"),
+        ],
+    )
+    result = CliRunner().invoke(
+        cli.app,
+        [
+            "watch",
+            "--count",
+            "1",
+            "--json",
+            "--search",
+            "api -worker",
+            "--pid",
+            "42",
+            "--process",
+            "PY",
+            "--project",
+            "api",
+        ],
+    )
+    assert result.exit_code == 0
+    assert [item["port"] for item in json.loads(result.stdout)["ports"]] == [3000]

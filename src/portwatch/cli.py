@@ -286,6 +286,10 @@ def free(
 @app.command()
 @report_system_errors
 def watch(
+    search: Annotated[str, typer.Option("--search", help="Filter listener metadata.")] = "",
+    pid: Annotated[int | None, typer.Option("--pid", min=1, help="Filter process IDs.")] = None,
+    process: Annotated[str, typer.Option("--process", help="Filter process names.")] = "",
+    project: Annotated[str, typer.Option("--project", help="Filter project names.")] = "",
     changes_only: Annotated[
         bool, typer.Option("--changes-only", help="Emit only changed snapshots.")
     ] = False,
@@ -309,7 +313,9 @@ def watch(
     except InvalidPortError as error:
         _fail(str(error), 2)
     snapshots = watch_snapshots(
-        lambda: service.list_ports(parsed_range),
+        lambda: filter_ports(
+            service.list_ports(parsed_range), search, pid=pid, process=process, project=project
+        ),
         interval,
         count,
         changes_only=changes_only,

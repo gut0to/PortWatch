@@ -199,3 +199,19 @@ project names, PIDs, and timestamps remain available; review them before sharing
 
 CSV text fields beginning with spreadsheet formula prefixes are prefixed with
 an apostrophe. JSON and JSON Lines preserve their original text.
+
+
+### Scripted monitoring and free-port batches
+
+`portwatch next 3000 --end 4000 --count 3 --json` finds three free TCP port
+numbers in one scan. All requested ports must fit in the inclusive range;
+otherwise the command exits with 3. A single-port request retains the existing
+`start`, `port`, and `available` JSON fields; batches return `start` and `ports`.
+These results do not reserve sockets.
+
+`portwatch watch --json --count 10 --changes-only --search "api -worker"`
+streams a JSON object containing `ports` and `scanned_at` for each changed
+snapshot. The first snapshot is always emitted, including when empty. `--count`
+counts scan attempts, including suppressed duplicates. Reordering alone is not
+a change. Watch accepts the same `--pid`, `--process`, and `--project` filters
+as listener queries.
