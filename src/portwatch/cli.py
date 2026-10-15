@@ -18,7 +18,12 @@ from portwatch.domain.exceptions import (
 from portwatch.domain.models import PortInfo
 from portwatch.presentation.console import format_port_count, print_inspection
 from portwatch.presentation.errors import report_system_errors
-from portwatch.presentation.serializers import port_to_dict, ports_to_csv, ports_to_json
+from portwatch.presentation.serializers import (
+    port_to_dict,
+    ports_to_csv,
+    ports_to_json,
+    ports_to_json_lines,
+)
 from portwatch.presentation.tables import ports_table, watch_view
 from portwatch.services.port_filters import filter_ports
 from portwatch.services.port_service import PortService
@@ -61,6 +66,9 @@ def main(
 @app.command("list")
 @report_system_errors
 def list_ports(
+    json_lines: Annotated[
+        bool, typer.Option("--json-lines", help="One JSON listener per line.")
+    ] = False,
     count_only: Annotated[
         bool, typer.Option("--count", help="Print the matching listener count.")
     ] = False,
@@ -98,8 +106,8 @@ def list_ports(
     ] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Print machine-readable JSON.")] = False,
 ) -> None:
-    if sum((as_csv, as_json, quiet, count_only)) > 1:
-        _fail("Choose only one output format: --json, --csv, --quiet, or --count.", 2)
+    if sum((as_csv, as_json, quiet, count_only, json_lines)) > 1:
+        _fail("Choose only one output format: --json, --csv, --quiet, --count, or --json-lines.", 2)
     try:
         excluded = parse_port_selection(exclude) if exclude is not None else frozenset()
         selection = parse_port_selection(selected_ports) if selected_ports is not None else None
@@ -127,7 +135,10 @@ def list_ports(
     ports = ports[offset:]
     if limit:
         ports = ports[:limit]
-    if count_only:
+    if json_lines:
+        if ports:
+            typer.echo(ports_to_json_lines(ports))
+    elif count_only:
         typer.echo(str(len(ports)))
     elif quiet:
         for port_number in dict.fromkeys(item.port for item in ports):

@@ -34,3 +34,10 @@ def invoke(*args):
     result = CliRunner().invoke(cli.app, list(args))
     assert result.exit_code == 0, result.output
     return result.stdout
+
+
+def test_cli_json_lines(listeners):
+    rows = [json.loads(line) for line in invoke("list", "--json-lines").splitlines()]
+    assert [item["port"] for item in rows] == [3000, 4000, 4000]
+    assert invoke("list", "--json-lines", "--search", "missing") == ""
+    assert CliRunner().invoke(cli.app, ["list", "--json-lines", "--json"]).exit_code == 2

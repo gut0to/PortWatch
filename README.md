@@ -149,3 +149,17 @@ after the MVP stabilizes.
 ## License
 
 MIT.
+
+
+### Targeted listener queries
+
+`list --ports 80,443,3000-3010 --exclude 3005` selects disjoint ports and ranges.
+`--search "python api -worker"` requires every positive term and excludes metadata
+containing `worker`. Process and project filters support `--exact` for full-name
+matching. All matching is case-insensitive.
+
+Use `--offset N --limit N` to paginate after sorting. `--quiet` prints unique port
+numbers; `--count` prints the number of listener records (owners sharing a port
+are separate records). `--json-lines` emits one listener object per line and no
+output for an empty result. These formats cannot be combined with each other,
+`--json`, or `--csv`.
