@@ -75,6 +75,11 @@ def diff_snapshots(
     current = {_identity(item): item for item in after}
     return {
         "added": [port_to_dict(current[key]) for key in sorted(current.keys() - previous.keys())],
+        "changed": [
+            {"before": port_to_dict(previous[key]), "after": port_to_dict(current[key])}
+            for key in sorted(previous.keys() & current.keys())
+            if previous[key] != current[key]
+        ],
         "removed": [
             port_to_dict(previous[key]) for key in sorted(previous.keys() - current.keys())
         ],

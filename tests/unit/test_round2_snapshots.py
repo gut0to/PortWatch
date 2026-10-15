@@ -62,4 +62,16 @@ def test_snapshot_diff_detects_restart_and_orders_ports():
     result = diff_snapshots([old], [new, PortInfo(80, "tcp", "LISTENING")])
     assert [row["port"] for row in result["added"]] == [80, 3000]
     assert result["removed"] == [port_to_dict(old)]
-    assert diff_snapshots([old], [old]) == {"added": [], "removed": []}
+    assert diff_snapshots([old], [old]) == {"added": [], "removed": [], "changed": []}
+
+
+def test_snapshot_diff_reports_metadata_changes_without_owner_changes():
+    from dataclasses import replace
+
+    from portwatch.services.snapshots import diff_snapshots
+
+    old = PortInfo(3000, "tcp", "LISTENING", pid=42)
+    new = replace(old, project_name="API")
+    result = diff_snapshots([old], [new])
+    assert result["added"] == result["removed"] == []
+    assert result["changed"] == [{"before": port_to_dict(old), "after": port_to_dict(new)}]
