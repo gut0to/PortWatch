@@ -1,6 +1,8 @@
 """Validate portable listener snapshots and compare their process identities."""
 
+import json
 from datetime import datetime
+from pathlib import Path
 from typing import cast
 
 from portwatch.domain.models import PortInfo
@@ -43,3 +45,14 @@ def decode_snapshot(data: object) -> list[PortInfo]:
             )
         )
     return ports
+
+
+MAX_SNAPSHOT_BYTES = 10 * 1024 * 1024
+
+
+def load_snapshot(path: Path) -> list[PortInfo]:
+    with path.open("rb") as source:
+        raw = source.read(MAX_SNAPSHOT_BYTES + 1)
+    if len(raw) > MAX_SNAPSHOT_BYTES:
+        raise ValueError("Snapshot files must be at most 10 MiB.")
+    return decode_snapshot(json.loads(raw.decode("utf-8")))

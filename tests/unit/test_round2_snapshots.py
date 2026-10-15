@@ -34,3 +34,21 @@ def test_snapshot_round_trip_with_optional_metadata():
 def test_snapshot_rejects_invalid_schema(data):
     with pytest.raises(ValueError):
         decode_snapshot(data)
+
+
+def test_snapshot_file_loader_bounds_reads_and_validates_json(tmp_path, monkeypatch):
+    import portwatch.services.snapshots as snapshots
+
+    path = tmp_path / "ports.json"
+    path.write_text("[]", encoding="utf-8")
+    assert snapshots.load_snapshot(path) == []
+    monkeypatch.setattr(snapshots, "MAX_SNAPSHOT_BYTES", 2)
+    path.write_bytes(b"[] ")
+    with pytest.raises(ValueError, match="10 MiB"):
+        snapshots.load_snapshot(path)
+    path.write_bytes(b"\xff")
+    with pytest.raises(ValueError):
+        snapshots.load_snapshot(path)
+    path.write_text("{", encoding="utf-8")
+    with pytest.raises(ValueError):
+        snapshots.load_snapshot(path)
