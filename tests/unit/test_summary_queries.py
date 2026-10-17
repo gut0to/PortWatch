@@ -40,3 +40,13 @@ def test_summary_exact_name_filters_combine(listeners):
     result = invoke("--process", "PYTHON", "--project", "api", "--exact", "--json")
     assert json.loads(result.stdout)["listeners"] == 2
     assert json.loads(invoke("--process", "py", "--exact", "--json").stdout)["listeners"] == 0
+
+
+def test_summary_file_output_protects_existing_reports(listeners, tmp_path):
+    path = tmp_path / "summary.json"
+    result = invoke("--output", str(path), "--group", "process")
+    assert result.exit_code == 0 and result.stdout == ""
+    assert json.loads(path.read_text())["processes"] == 2
+    assert invoke("--output", str(path)).exit_code == 2
+    assert invoke("--output", str(path), "--overwrite").exit_code == 0
+    assert invoke("--overwrite").exit_code == 2

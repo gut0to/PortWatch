@@ -421,6 +421,12 @@ def _fail(message: str, code: int) -> NoReturn:
 @app.command()
 @report_system_errors
 def summary(
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Save a JSON summary.")
+    ] = None,
+    overwrite: Annotated[
+        bool, typer.Option("--overwrite", help="Replace an existing summary.")
+    ] = False,
     process: Annotated[str, typer.Option("--process", help="Filter process names.")] = "",
     project: Annotated[str, typer.Option("--project", help="Filter project names.")] = "",
     exact: Annotated[
@@ -441,6 +447,8 @@ def summary(
     as_json: Annotated[bool, typer.Option("--json", help="Print JSON totals.")] = False,
 ) -> None:
     """Summarize local TCP listeners without counting duplicate owners twice."""
+    if overwrite and output is None:
+        _fail("--overwrite requires --output.", 2)
     try:
         selection = parse_port_selection(selected_ports) if selected_ports is not None else None
         excluded = parse_port_selection(exclude) if exclude is not None else frozenset()
@@ -469,7 +477,12 @@ def summary(
     report: dict[str, object] = dict(totals)
     if group != GroupField.none:
         report["groups"] = groups
-    if as_json:
+    if output is not None:
+        try:
+            write_snapshot(output, json.dumps(report, indent=2), overwrite=overwrite)
+        except FileExistsError:
+            _fail("The output file exists. Use --overwrite to replace it.", 2)
+    elif as_json:
         typer.echo(json.dumps(report))
     else:
         for label, value in totals.items():
