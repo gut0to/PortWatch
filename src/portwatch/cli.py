@@ -460,6 +460,9 @@ def compare_snapshots(
         list[str] | None,
         typer.Option("--ignore", help="Ignore a metadata field; repeat as needed."),
     ] = None,
+    selected_ports: Annotated[
+        str | None, typer.Option("--ports", help="Compare selected ports and ranges.")
+    ] = None,
     after: Annotated[
         Path | None,
         typer.Argument(exists=True, dir_okay=False, help="Later snapshot; omit to scan now."),
@@ -473,9 +476,15 @@ def compare_snapshots(
 ) -> None:
     """Compare saved snapshots or compare one snapshot with live listeners."""
     try:
+        selection = parse_port_selection(selected_ports) if selected_ports is not None else None
+        previous = load_snapshot(before)
+        current = load_snapshot(after) if after else service.list_ports()
+        if selection is not None:
+            previous = [item for item in previous if item.port in selection]
+            current = [item for item in current if item.port in selection]
         changes = diff_snapshots(
-            load_snapshot(before),
-            load_snapshot(after) if after else service.list_ports(),
+            previous,
+            current,
             ignore_fields=frozenset(ignore or []),
         )
     except ValueError as error:

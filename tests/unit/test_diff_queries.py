@@ -42,3 +42,12 @@ def test_diff_ignore_metadata_fields(files):
     assert result.exit_code == 0
     assert json.loads(result.stdout)["changed"] == []
     assert invoke(files, "--ignore", "pid").exit_code == 2
+
+
+def test_diff_port_selection_applies_to_both_snapshots(files):
+    result = invoke(files, "--ports", "3000", "--json")
+    assert result.exit_code == 0
+    data = json.loads(result.stdout)
+    assert data["added"] == data["removed"] == []
+    assert len(data["changed"]) == 1
+    assert invoke(files, "--ports", "0").exit_code == 2
