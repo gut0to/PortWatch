@@ -463,6 +463,9 @@ def compare_snapshots(
     selected_ports: Annotated[
         str | None, typer.Option("--ports", help="Compare selected ports and ranges.")
     ] = None,
+    search: Annotated[
+        str, typer.Option("--search", help="Filter metadata in both snapshots.")
+    ] = "",
     after: Annotated[
         Path | None,
         typer.Argument(exists=True, dir_okay=False, help="Later snapshot; omit to scan now."),
@@ -483,8 +486,8 @@ def compare_snapshots(
             previous = [item for item in previous if item.port in selection]
             current = [item for item in current if item.port in selection]
         changes = diff_snapshots(
-            previous,
-            current,
+            filter_ports(previous, search),
+            filter_ports(current, search),
             ignore_fields=frozenset(ignore or []),
         )
     except ValueError as error:

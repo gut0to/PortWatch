@@ -51,3 +51,10 @@ def test_diff_port_selection_applies_to_both_snapshots(files):
     assert data["added"] == data["removed"] == []
     assert len(data["changed"]) == 1
     assert invoke(files, "--ports", "0").exit_code == 2
+
+
+def test_diff_metadata_search(files):
+    result = invoke(files, "--search", "python -worker", "--json")
+    data = json.loads(result.stdout)
+    assert data["added"] == data["removed"] == []
+    assert len(data["changed"]) == 1
