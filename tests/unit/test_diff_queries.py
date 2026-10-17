@@ -78,3 +78,22 @@ def test_diff_redaction_keeps_sensitive_changes_visible(files):
     assert data["changed"][0]["before"]["command"] is None
     assert "private" not in result.stdout
     assert data["added"][0]["command"] is None
+
+
+def test_csv_changes_preserve_before_and_after_and_escape_formulas():
+    import csv
+    import io
+
+    from portwatch.presentation.serializers import changes_to_csv
+
+    row = {"port": 1, "command": "=1"}
+    rows = list(
+        csv.DictReader(
+            io.StringIO(
+                changes_to_csv({"changed": [{"before": row, "after": row}], "added": [row]})
+            )
+        )
+    )
+    assert [item["side"] for item in rows] == ["before", "after", "listener"]
+    assert all(item["command"] == "'=1" for item in rows)
+    assert "change,side,port" in changes_to_csv({})
