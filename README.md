@@ -239,3 +239,12 @@ presence of sensitive metadata changes without exposing their values.
 and `--exact` in addition to search and range filtering. Grouped rows can be
 sorted with `--sort name|listeners|ports|processes|projects` and `--descending`.
 `--output report.json` saves the JSON summary; replacement requires `--overwrite`.
+
+
+`watch` accepts disjoint `--ports` selections, `--exclude`, `--exact`, and
+`--redact`. `--output watch.jsonl` creates a new UTF-8 log and flushes each
+snapshot to disk; existing files are never replaced. This output can be read
+by `diff`, which uses its latest snapshot. `--skip-initial` establishes the
+first scan as a baseline without emitting it, while still counting that scan
+toward `--count`. Combine it with `--changes-only` to emit only later changes.
+`next --exclude 3000-3010` avoids reserved ports even when they are currently free.

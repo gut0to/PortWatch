@@ -75,3 +75,9 @@ def test_monitor_can_skip_initial_snapshot_without_losing_baseline():
         watch_snapshots(scan, 0.2, 3, changes_only=True, skip_initial=True, sleep=Mock())
     ) == [[]]
     assert list(watch_snapshots(lambda: [], 0.2, 1, skip_initial=True, sleep=Mock())) == []
+
+
+def test_cli_skip_initial_counts_scan_attempts(listeners):
+    result = invoke("--json", "--skip-initial")
+    assert result.exit_code == 0 and len(result.stdout.splitlines()) == 1
+    assert invoke("--json", "--skip-initial", "--changes-only").stdout == ""

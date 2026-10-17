@@ -310,6 +310,9 @@ def free(
 @app.command()
 @report_system_errors
 def watch(
+    skip_initial: Annotated[
+        bool, typer.Option("--skip-initial", help="Establish a baseline without emitting it.")
+    ] = False,
     exact: Annotated[
         bool, typer.Option("--exact", help="Require exact process and project names.")
     ] = False,
@@ -374,6 +377,7 @@ def watch(
         interval,
         count,
         changes_only=changes_only,
+        skip_initial=skip_initial,
         sleep=time.sleep,
     )
     try:
