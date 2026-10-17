@@ -59,7 +59,7 @@ def load_snapshot(path: Path) -> list[PortInfo]:
         raw = source.read(MAX_SNAPSHOT_BYTES + 1)
     if len(raw) > MAX_SNAPSHOT_BYTES:
         raise ValueError("Snapshot files must be at most 10 MiB.")
-    return decode_snapshot(json.loads(raw.decode("utf-8-sig")))
+    return decode_snapshot(json.loads(raw.decode("utf-8-sig"), object_pairs_hook=_unique_fields))
 
 
 def _identity(item: PortInfo) -> tuple[int, str, int, str]:
@@ -116,3 +116,12 @@ def write_snapshot(path: Path, content: str, *, overwrite: bool = False) -> None
 def redact_snapshot(ports: list[PortInfo]) -> list[PortInfo]:
     """Remove command lines and local paths while retaining comparison identities."""
     return [replace(item, command=None, working_directory=None) for item in ports]
+
+
+def _unique_fields(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"Duplicate snapshot field: {key}.")
+        result[key] = value
+    return result
