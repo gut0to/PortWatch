@@ -6,7 +6,7 @@ from collections.abc import Callable
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import Annotated, NoReturn
+from typing import Annotated, NoReturn, cast
 
 import typer
 from rich.console import Console
@@ -43,6 +43,14 @@ from portwatch.services.snapshots import (
 from portwatch.system.termination import ProcessTerminator
 from portwatch.utils.ports import parse_port_range, parse_port_selection, validate_port
 from portwatch.web.server import create_server
+
+
+class GroupSortField(StrEnum):
+    name = "name"
+    listeners = "listeners"
+    ports = "ports"
+    processes = "processes"
+    projects = "projects"
 
 
 class GroupField(StrEnum):
@@ -421,6 +429,12 @@ def _fail(message: str, code: int) -> NoReturn:
 @app.command()
 @report_system_errors
 def summary(
+    sort: Annotated[
+        GroupSortField, typer.Option("--sort", help="Order grouped summary rows.")
+    ] = GroupSortField.name,
+    descending: Annotated[
+        bool, typer.Option("--descending", help="Reverse grouped row order.")
+    ] = False,
     output: Annotated[
         Path | None, typer.Option("--output", "-o", help="Save a JSON summary.")
     ] = None,
@@ -447,6 +461,8 @@ def summary(
     as_json: Annotated[bool, typer.Option("--json", help="Print JSON totals.")] = False,
 ) -> None:
     """Summarize local TCP listeners without counting duplicate owners twice."""
+    if group == GroupField.none and (sort != GroupSortField.name or descending):
+        _fail("Group sorting requires --group.", 2)
     if overwrite and output is None:
         _fail("--overwrite requires --output.", 2)
     try:
@@ -473,6 +489,14 @@ def summary(
         group_ports(ports, "project_name" if group == GroupField.project else "process_name")
         if group != GroupField.none
         else []
+    )
+    groups.sort(
+        key=lambda row: (
+            str(row["name"]).casefold()
+            if sort == GroupSortField.name
+            else cast(int, row[sort.value])
+        ),
+        reverse=descending,
     )
     report: dict[str, object] = dict(totals)
     if group != GroupField.none:

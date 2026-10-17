@@ -233,3 +233,9 @@ for a report with change and before/after columns, or `--output` to save JSON
 by default. Existing reports require `--overwrite`.
 `--redact` hides commands and directories after comparison, preserving the
 presence of sensitive metadata changes without exposing their values.
+
+
+`summary` accepts `--ports`, `--exclude`, `--pid`, `--process`, `--project`,
+and `--exact` in addition to search and range filtering. Grouped rows can be
+sorted with `--sort name|listeners|ports|processes|projects` and `--descending`.
+`--output report.json` saves the JSON summary; replacement requires `--overwrite`.

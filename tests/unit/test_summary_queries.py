@@ -50,3 +50,11 @@ def test_summary_file_output_protects_existing_reports(listeners, tmp_path):
     assert invoke("--output", str(path)).exit_code == 2
     assert invoke("--output", str(path), "--overwrite").exit_code == 0
     assert invoke("--overwrite").exit_code == 2
+
+
+def test_summary_group_sorting(listeners):
+    report = json.loads(
+        invoke("--group", "process", "--sort", "listeners", "--descending", "--json").stdout
+    )
+    assert [row["name"] for row in report["groups"]] == ["python", "node"]
+    assert invoke("--sort", "listeners").exit_code == 2
