@@ -34,3 +34,9 @@ def test_summary_pid_filter_counts_one_process_with_multiple_ports(listeners):
     data = json.loads(result.stdout)
     assert data["listeners"] == 2 and data["processes"] == 1
     assert invoke("--pid", "0").exit_code == 2
+
+
+def test_summary_exact_name_filters_combine(listeners):
+    result = invoke("--process", "PYTHON", "--project", "api", "--exact", "--json")
+    assert json.loads(result.stdout)["listeners"] == 2
+    assert json.loads(invoke("--process", "py", "--exact", "--json").stdout)["listeners"] == 0

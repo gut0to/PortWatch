@@ -421,6 +421,11 @@ def _fail(message: str, code: int) -> NoReturn:
 @app.command()
 @report_system_errors
 def summary(
+    process: Annotated[str, typer.Option("--process", help="Filter process names.")] = "",
+    project: Annotated[str, typer.Option("--project", help="Filter project names.")] = "",
+    exact: Annotated[
+        bool, typer.Option("--exact", help="Require exact process and project names.")
+    ] = False,
     pid: Annotated[int | None, typer.Option("--pid", min=1, help="Summarize a process ID.")] = None,
     selected_ports: Annotated[
         str | None, typer.Option("--ports", help="Select ports and ranges.")
@@ -440,7 +445,14 @@ def summary(
         selection = parse_port_selection(selected_ports) if selected_ports is not None else None
         excluded = parse_port_selection(exclude) if exclude is not None else frozenset()
         bounds = parse_port_range(port_range) if port_range else None
-        ports = filter_ports(service.list_ports(bounds), search, pid=pid)
+        ports = filter_ports(
+            service.list_ports(bounds),
+            search,
+            pid=pid,
+            process=process,
+            project=project,
+            exact=exact,
+        )
     except InvalidPortError as error:
         _fail(str(error), 2)
     ports = [
