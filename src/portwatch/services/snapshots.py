@@ -82,8 +82,12 @@ def _identity(item: PortInfo) -> tuple[int, str, int, str]:
 
 
 def diff_snapshots(
-    before: list[PortInfo], after: list[PortInfo]
+    before: list[PortInfo], after: list[PortInfo], *, ignore_fields: frozenset[str] = frozenset()
 ) -> dict[str, list[dict[str, object]]]:
+    if ignore_fields - {"command", "working_directory", "process_name", "project_name"}:
+        raise ValueError(
+            "Only command, working_directory, process_name, and project_name can be ignored."
+        )
     previous = {_identity(item): item for item in before}
     current = {_identity(item): item for item in after}
     return {
@@ -91,7 +95,16 @@ def diff_snapshots(
         "changed": [
             {"before": port_to_dict(previous[key]), "after": port_to_dict(current[key])}
             for key in sorted(previous.keys() & current.keys())
-            if previous[key] != current[key]
+            if {
+                field: value
+                for field, value in port_to_dict(previous[key]).items()
+                if field not in ignore_fields and field != "started_at"
+            }
+            != {
+                field: value
+                for field, value in port_to_dict(current[key]).items()
+                if field not in ignore_fields and field != "started_at"
+            }
         ],
         "removed": [
             port_to_dict(previous[key]) for key in sorted(previous.keys() - current.keys())

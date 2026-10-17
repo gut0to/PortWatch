@@ -71,3 +71,22 @@ def test_import_dashboard_snapshots_and_latest_watch_record(tmp_path):
     assert decode_json_lines('{"ports":["bad"]}\n{"ports":[]}') == []
     with pytest.raises(ValueError):
         decode_snapshot({"ports": "bad"})
+
+
+def test_ignored_diff_fields_do_not_hide_identity_changes():
+    from dataclasses import replace
+
+    from portwatch.domain.models import PortInfo
+    from portwatch.services.snapshots import diff_snapshots
+
+    first = PortInfo(3000, "tcp", "LISTENING", pid=42, command="old")
+    assert not any(
+        diff_snapshots(
+            [first], [replace(first, command="new")], ignore_fields=frozenset({"command"})
+        ).values()
+    )
+    assert diff_snapshots([first], [replace(first, pid=43)], ignore_fields=frozenset({"command"}))[
+        "added"
+    ]
+    with pytest.raises(ValueError, match="Only"):
+        diff_snapshots([], [], ignore_fields=frozenset({"pid"}))
