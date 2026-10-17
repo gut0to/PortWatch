@@ -12,6 +12,7 @@ def watch_snapshots(
     count: int,
     *,
     changes_only: bool = False,
+    skip_initial: bool = False,
     sleep: Callable[[float], None] = time.sleep,
 ) -> Iterator[list[PortInfo]]:
     previous: frozenset[PortInfo] | None = None
@@ -19,7 +20,7 @@ def watch_snapshots(
     while True:
         ports = scan()
         signature = frozenset(ports)
-        if not changes_only or signature != previous:
+        if (not skip_initial or scans > 0) and (not changes_only or signature != previous):
             yield ports
         previous = signature
         scans += 1

@@ -64,3 +64,14 @@ def test_watch_exact_process_filter(listeners):
     result = invoke("--process", "PYTHON", "--exact", "--json")
     assert result.exit_code == 0
     assert [item["port"] for item in json.loads(result.stdout.splitlines()[0])["ports"]] == [3000]
+
+
+def test_monitor_can_skip_initial_snapshot_without_losing_baseline():
+    from portwatch.services.monitoring import watch_snapshots
+
+    item = PortInfo(3000, "tcp", "LISTENING")
+    scan = Mock(side_effect=[[item], [item], []])
+    assert list(
+        watch_snapshots(scan, 0.2, 3, changes_only=True, skip_initial=True, sleep=Mock())
+    ) == [[]]
+    assert list(watch_snapshots(lambda: [], 0.2, 1, skip_initial=True, sleep=Mock())) == []
