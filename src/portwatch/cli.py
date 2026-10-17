@@ -309,6 +309,12 @@ def free(
 @app.command()
 @report_system_errors
 def watch(
+    selected_ports: Annotated[
+        str | None, typer.Option("--ports", help="Watch selected ports and ranges.")
+    ] = None,
+    exclude: Annotated[
+        str | None, typer.Option("--exclude", help="Exclude ports and ranges.")
+    ] = None,
     search: Annotated[str, typer.Option("--search", help="Filter listener metadata.")] = "",
     pid: Annotated[int | None, typer.Option("--pid", min=1, help="Filter process IDs.")] = None,
     process: Annotated[str, typer.Option("--process", help="Filter process names.")] = "",
@@ -332,13 +338,24 @@ def watch(
     if not math.isfinite(interval):
         _fail("Refresh interval must be finite.", 2)
     try:
+        selection = parse_port_selection(selected_ports) if selected_ports is not None else None
+        excluded = parse_port_selection(exclude) if exclude is not None else frozenset()
         parsed_range = parse_port_range(port_range) if port_range else None
     except InvalidPortError as error:
         _fail(str(error), 2)
-    snapshots = watch_snapshots(
-        lambda: filter_ports(
+
+    def scan_selected() -> list[PortInfo]:
+        ports = filter_ports(
             service.list_ports(parsed_range), search, pid=pid, process=process, project=project
-        ),
+        )
+        return [
+            item
+            for item in ports
+            if (selection is None or item.port in selection) and item.port not in excluded
+        ]
+
+    snapshots = watch_snapshots(
+        scan_selected,
         interval,
         count,
         changes_only=changes_only,
