@@ -16,6 +16,7 @@ from portwatch.utils.ports import validate_port
 def decode_snapshot(data: object) -> list[PortInfo]:
     if not isinstance(data, list):
         raise ValueError("A snapshot must be a JSON array of listeners.")
+    seen: set[tuple[int, str, int, str]] = set()
     ports: list[PortInfo] = []
     for row in data:
         if not isinstance(row, dict) or not {"port", "protocol", "status"} <= row.keys():
@@ -48,6 +49,10 @@ def decode_snapshot(data: object) -> list[PortInfo]:
                 started_at=datetime.fromisoformat(started) if started is not None else None,
             )
         )
+        key = _identity(ports[-1])
+        if key in seen:
+            raise ValueError("Duplicate listener identity in snapshot.")
+        seen.add(key)
     return ports
 
 
