@@ -59,7 +59,7 @@ def load_snapshot(path: Path) -> list[PortInfo]:
         raw = source.read(MAX_SNAPSHOT_BYTES + 1)
     if len(raw) > MAX_SNAPSHOT_BYTES:
         raise ValueError("Snapshot files must be at most 10 MiB.")
-    return decode_snapshot(json.loads(raw.decode("utf-8")))
+    return decode_snapshot(json.loads(raw.decode("utf-8-sig")))
 
 
 def _identity(item: PortInfo) -> tuple[int, str, int, str]:
