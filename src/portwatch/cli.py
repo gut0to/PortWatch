@@ -230,6 +230,9 @@ def inspect(
 @report_system_errors
 def next(
     port: Annotated[int, typer.Argument(help="Starting port.")],
+    exclude: Annotated[
+        str | None, typer.Option("--exclude", help="Skip reserved ports and ranges.")
+    ] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Print machine-readable JSON.")] = False,
     count: Annotated[
         int, typer.Option("--count", min=1, max=65535, help="Number of free ports needed.")
@@ -239,15 +242,25 @@ def next(
     ] = 65535,
     verbose: Annotated[bool, typer.Option("--verbose", help="Explain the result.")] = False,
 ) -> None:
-    if count > 1:
+    try:
+        excluded = parse_port_selection(exclude) if exclude is not None else frozenset()
+    except InvalidPortError as error:
+        _fail(str(error), 2)
+    if count > 1 or excluded:
         try:
-            found = service.available_ports(port, count, end)
+            found = service.available_ports(port, count, end, excluded=excluded)
         except InvalidPortError as error:
             _fail(str(error), 2)
         except PortNotFoundError as error:
             _fail(str(error), 3)
         if as_json:
-            typer.echo(json.dumps({"start": port, "ports": found}))
+            typer.echo(
+                json.dumps(
+                    {"start": port, "ports": found}
+                    if count > 1
+                    else {"start": port, "port": found[0], "available": found[0] == port}
+                )
+            )
         else:
             for candidate in found:
                 typer.echo(f"Available port: {candidate}" if verbose else str(candidate))

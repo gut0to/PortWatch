@@ -34,12 +34,14 @@ class PortService:
     def next_available(self, start: int, end: int = 65535) -> int:
         return self.available_ports(start, 1, end)[0]
 
-    def available_ports(self, start: int, count: int, end: int = 65535) -> list[int]:
+    def available_ports(
+        self, start: int, count: int, end: int = 65535, *, excluded: frozenset[int] = frozenset()
+    ) -> list[int]:
         bounds = PortRange(start, end)
         if isinstance(count, bool) or not isinstance(count, int) or count < 1:
             raise InvalidPortError("Available port count must be a positive integer.")
         found: list[int] = []
-        occupied = {item.port for item in self.scanner.list_listening_ports()}
+        occupied = {item.port for item in self.scanner.list_listening_ports()} | excluded
         for port in range(bounds.start, bounds.end + 1):
             if port not in occupied:
                 found.append(port)

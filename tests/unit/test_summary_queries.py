@@ -58,3 +58,20 @@ def test_summary_group_sorting(listeners):
     )
     assert [row["name"] for row in report["groups"]] == ["python", "node"]
     assert invoke("--sort", "listeners").exit_code == 2
+
+
+def test_next_excludes_reserved_ports_and_keeps_single_json_contract(monkeypatch):
+    from unittest.mock import Mock
+
+    from portwatch.services.port_service import PortService
+
+    scanner = Mock()
+    scanner.list_listening_ports.return_value = []
+    monkeypatch.setattr(cli, "service", PortService(scanner=scanner))
+    result = CliRunner().invoke(cli.app, ["next", "3000", "--exclude", "3000-3002", "--json"])
+    assert json.loads(result.stdout) == {"start": 3000, "port": 3003, "available": False}
+    result = CliRunner().invoke(
+        cli.app, ["next", "3000", "--exclude", "3001", "--count", "2", "--json"]
+    )
+    assert json.loads(result.stdout)["ports"] == [3000, 3002]
+    assert CliRunner().invoke(cli.app, ["next", "3000", "--exclude", "bad"]).exit_code == 2
