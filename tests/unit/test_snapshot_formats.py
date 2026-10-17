@@ -50,3 +50,10 @@ def test_json_lines_decode_blank_lines_and_report_bad_lines():
     assert decode_json_lines("") == []
     with pytest.raises(ValueError, match="line 2"):
         decode_json_lines(row + "\nbad")
+
+
+@pytest.mark.parametrize("extension", ["jsonl", "ndjson", "JSONL"])
+def test_snapshot_file_format_follows_extension(tmp_path, extension):
+    path = tmp_path / f"ports.{extension}"
+    path.write_text('{"port":3000,"protocol":"tcp","status":"LISTENING"}\n')
+    assert load_snapshot(path)[0].port == 3000

@@ -64,7 +64,10 @@ def load_snapshot(path: Path) -> list[PortInfo]:
         raw = source.read(MAX_SNAPSHOT_BYTES + 1)
     if len(raw) > MAX_SNAPSHOT_BYTES:
         raise ValueError("Snapshot files must be at most 10 MiB.")
-    return decode_snapshot(json.loads(raw.decode("utf-8-sig"), object_pairs_hook=_unique_fields))
+    text = raw.decode("utf-8-sig")
+    if path.suffix.casefold() in {".jsonl", ".ndjson"}:
+        return decode_json_lines(text)
+    return decode_snapshot(json.loads(text, object_pairs_hook=_unique_fields))
 
 
 def _identity(item: PortInfo) -> tuple[int, str, int, str]:
