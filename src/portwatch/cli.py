@@ -456,6 +456,10 @@ def compare_snapshots(
     before: Annotated[
         Path, typer.Argument(exists=True, dir_okay=False, help="Earlier JSON snapshot.")
     ],
+    ignore: Annotated[
+        list[str] | None,
+        typer.Option("--ignore", help="Ignore a metadata field; repeat as needed."),
+    ] = None,
     after: Annotated[
         Path | None,
         typer.Argument(exists=True, dir_okay=False, help="Later snapshot; omit to scan now."),
@@ -470,7 +474,9 @@ def compare_snapshots(
     """Compare saved snapshots or compare one snapshot with live listeners."""
     try:
         changes = diff_snapshots(
-            load_snapshot(before), load_snapshot(after) if after else service.list_ports()
+            load_snapshot(before),
+            load_snapshot(after) if after else service.list_ports(),
+            ignore_fields=frozenset(ignore or []),
         )
     except ValueError as error:
         _fail(f"Invalid snapshot: {error}", 2)
