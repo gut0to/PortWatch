@@ -68,3 +68,13 @@ def test_diff_output_file_and_difference_exit_code(files, tmp_path):
     assert invoke(files, "--output", str(path)).exit_code == 2
     assert invoke(files, "--output", str(path), "--overwrite").exit_code == 0
     assert invoke(files, "--overwrite").exit_code == 2
+
+
+def test_diff_redaction_keeps_sensitive_changes_visible(files):
+    result = invoke(files, "--redact", "--json")
+    assert result.exit_code == 0
+    data = json.loads(result.stdout)
+    assert len(data["changed"]) == 1
+    assert data["changed"][0]["before"]["command"] is None
+    assert "private" not in result.stdout
+    assert data["added"][0]["command"] is None

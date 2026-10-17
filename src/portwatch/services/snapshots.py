@@ -162,3 +162,23 @@ def decode_json_lines(text: str) -> list[PortInfo]:
     if rows and all(isinstance(row, dict) and "ports" in row for row in rows):
         return decode_snapshot(rows[-1])
     return decode_snapshot(rows)
+
+
+def redact_changes(
+    changes: dict[str, list[dict[str, object]]],
+) -> dict[str, list[dict[str, object]]]:
+    def clean(row: dict[str, object]) -> dict[str, object]:
+        return {**row, "command": None, "working_directory": None}
+
+    return {
+        kind: [
+            {
+                "before": clean(cast(dict[str, object], row["before"])),
+                "after": clean(cast(dict[str, object], row["after"])),
+            }
+            if kind == "changed"
+            else clean(row)
+            for row in rows
+        ]
+        for kind, rows in changes.items()
+    }

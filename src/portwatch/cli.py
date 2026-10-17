@@ -35,6 +35,7 @@ from portwatch.services.reports import group_ports, summarize_ports
 from portwatch.services.snapshots import (
     diff_snapshots,
     load_snapshot,
+    redact_changes,
     redact_snapshot,
     write_snapshot,
 )
@@ -472,6 +473,9 @@ def compare_snapshots(
     overwrite: Annotated[
         bool, typer.Option("--overwrite", help="Replace an existing report.")
     ] = False,
+    redact: Annotated[
+        bool, typer.Option("--redact", help="Hide command lines and directories in reports.")
+    ] = False,
     after: Annotated[
         Path | None,
         typer.Argument(exists=True, dir_okay=False, help="Later snapshot; omit to scan now."),
@@ -500,6 +504,8 @@ def compare_snapshots(
         )
     except ValueError as error:
         _fail(f"Invalid snapshot: {error}", 2)
+    if redact:
+        changes = redact_changes(changes)
     if output is not None:
         try:
             write_snapshot(output, json.dumps(changes, indent=2), overwrite=overwrite)
