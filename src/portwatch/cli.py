@@ -421,6 +421,12 @@ def _fail(message: str, code: int) -> NoReturn:
 @app.command()
 @report_system_errors
 def summary(
+    selected_ports: Annotated[
+        str | None, typer.Option("--ports", help="Select ports and ranges.")
+    ] = None,
+    exclude: Annotated[
+        str | None, typer.Option("--exclude", help="Exclude ports and ranges.")
+    ] = None,
     group: Annotated[
         GroupField, typer.Option("--group", help="Group listener totals.")
     ] = GroupField.none,
@@ -430,10 +436,17 @@ def summary(
 ) -> None:
     """Summarize local TCP listeners without counting duplicate owners twice."""
     try:
+        selection = parse_port_selection(selected_ports) if selected_ports is not None else None
+        excluded = parse_port_selection(exclude) if exclude is not None else frozenset()
         bounds = parse_port_range(port_range) if port_range else None
         ports = filter_ports(service.list_ports(bounds), search)
     except InvalidPortError as error:
         _fail(str(error), 2)
+    ports = [
+        item
+        for item in ports
+        if (selection is None or item.port in selection) and item.port not in excluded
+    ]
     totals = summarize_ports(ports)
     groups = (
         group_ports(ports, "project_name" if group == GroupField.project else "process_name")
