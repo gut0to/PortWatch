@@ -213,18 +213,24 @@ def list_ports(
 @report_system_errors
 def inspect(
     port: Annotated[int, typer.Argument(help="Port to inspect.")],
+    all_owners: Annotated[
+        bool, typer.Option("--all", help="Inspect every process owning this port.")
+    ] = False,
     as_json: Annotated[bool, typer.Option("--json", help="Print machine-readable JSON.")] = False,
 ) -> None:
     try:
-        item = service.inspect(port)
+        items = service.inspect_all(port) if all_owners else [service.inspect(port)]
     except (InvalidPortError, PortNotFoundError) as error:
         if isinstance(error, PortNotFoundError):
             _fail(str(error), 3)
         _fail(str(error), 2)
     if as_json:
-        typer.echo(json.dumps(port_to_dict(item), indent=2))
+        typer.echo(
+            ports_to_json(items) if all_owners else json.dumps(port_to_dict(items[0]), indent=2)
+        )
     else:
-        print_inspection(console, item)
+        for item in items:
+            print_inspection(console, item)
 
 
 @app.command()

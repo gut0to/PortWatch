@@ -43,3 +43,21 @@ def test_inspect_all_preserves_distinct_owners_and_resolves_only_one_port():
         service.inspect_all(0)
     with pytest.raises(PortNotFoundError):
         service.inspect_all(3001)
+
+
+def test_cli_inspect_all_keeps_single_owner_contract(monkeypatch):
+    import json
+
+    from typer.testing import CliRunner
+
+    import portwatch.cli as cli
+
+    items = [PortInfo(3000, "tcp", "LISTENING", pid=1), PortInfo(3000, "tcp", "LISTENING", pid=2)]
+    monkeypatch.setattr(cli.service, "inspect_all", lambda port: items)
+    monkeypatch.setattr(cli.service, "inspect", lambda port: items[0])
+    runner = CliRunner()
+    result = runner.invoke(cli.app, ["inspect", "3000", "--all", "--json"])
+    assert result.exit_code == 0
+    assert [item["pid"] for item in json.loads(result.stdout)] == [1, 2]
+    assert json.loads(runner.invoke(cli.app, ["inspect", "3000", "--json"]).stdout)["pid"] == 1
+    assert runner.invoke(cli.app, ["inspect", "3000", "--all"]).exit_code == 0

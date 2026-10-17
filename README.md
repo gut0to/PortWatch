@@ -248,3 +248,9 @@ by `diff`, which uses its latest snapshot. `--skip-initial` establishes the
 first scan as a baseline without emitting it, while still counting that scan
 toward `--count`. Combine it with `--changes-only` to emit only later changes.
 `next --exclude 3000-3010` avoids reserved ports even when they are currently free.
+
+
+`portwatch inspect 3000 --all` shows every discovered owner of the selected
+port. With `--json`, `--all` returns an array; the existing single-owner command
+continues to return one object. Project detection reuses working-directory
+results only within a scan, so later scans still observe filesystem changes.
