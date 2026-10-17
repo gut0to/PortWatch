@@ -73,7 +73,7 @@ def main(output_directory: Path | None = None) -> None:
         ],
         cwd=PROJECT_ROOT,
         check=True,
-        timeout=120,
+        timeout=180,
     )
 
     checksum_path = _write_checksum(executable)

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Snapshot interoperability and inspection
+
+- Import UTF-8 BOM files, JSON Lines, dashboard responses, and the latest watch-log snapshot.
+- Reject ambiguous imported fields and duplicate listeners; normalize equivalent timestamp offsets.
+- Filter, redact, and export snapshot differences to JSON or spreadsheet-safe CSV.
+- Apply consistent port and ownership filters to summaries and watch sessions.
+- Sort grouped summaries, save reports, and exclude reserved ports from free-port discovery.
+- Persist flushed monitoring logs and support baseline-only startup.
+- Inspect all owners of a port, reuse per-scan project detection, and diagnose the local runtime.
+- Refresh the standalone Windows executable and its checksum.
+
 ### Snapshot and monitoring improvements
 
 - Select or exclude disjoint port ranges; combine search terms and exclusions.
