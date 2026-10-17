@@ -32,6 +32,13 @@ class PortService:
                 return self._enrich(item)
         raise PortNotFoundError(f"Port {port} is available.")
 
+    def inspect_all(self, port: int) -> list[PortInfo]:
+        validate_port(port)
+        listeners = self.list_ports(PortRange(port, port))
+        if not listeners:
+            raise PortNotFoundError(f"Port {port} is available.")
+        return listeners
+
     def next_available(self, start: int, end: int = 65535) -> int:
         return self.available_ports(start, 1, end)[0]
 

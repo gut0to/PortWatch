@@ -1,6 +1,8 @@
 from dataclasses import replace
 from unittest.mock import Mock
 
+import pytest
+
 from portwatch.domain.models import PortInfo
 from portwatch.services.port_service import PortService
 
@@ -21,3 +23,23 @@ def test_project_detection_is_cached_only_within_one_scan():
     detector.detect.return_value = "changed"
     assert service.list_ports()[0].project_name == "changed"
     assert detector.detect.call_count == 2
+
+
+def test_inspect_all_preserves_distinct_owners_and_resolves_only_one_port():
+    from portwatch.domain.exceptions import InvalidPortError, PortNotFoundError
+
+    scanner = Mock()
+    scanner.list_listening_ports.return_value = [
+        PortInfo(3000, "tcp", "LISTENING", pid=1),
+        PortInfo(3000, "tcp", "LISTENING", pid=2),
+        PortInfo(4000, "tcp", "LISTENING", pid=3),
+    ]
+    resolver = Mock()
+    resolver.enrich.side_effect = lambda item: item
+    service = PortService(scanner, resolver)
+    assert [item.pid for item in service.inspect_all(3000)] == [1, 2]
+    assert resolver.enrich.call_count == 2
+    with pytest.raises(InvalidPortError):
+        service.inspect_all(0)
+    with pytest.raises(PortNotFoundError):
+        service.inspect_all(3001)
