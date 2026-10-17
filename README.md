@@ -215,3 +215,12 @@ snapshot. The first snapshot is always emitted, including when empty. `--count`
 counts scan attempts, including suppressed duplicates. Reordering alone is not
 a change. Watch accepts the same `--pid`, `--process`, and `--project` filters
 as listener queries.
+
+
+### Importing snapshots from other workflows
+
+`diff` accepts UTF-8 files with or without a BOM. Files ending in `.jsonl` or
+`.ndjson` are read as JSON Lines; blank lines are ignored. Listener arrays and
+dashboard `{ "ports": [...] }` responses are accepted. For a JSON Lines watch
+log, the last complete snapshot is used. Invalid final records fail explicitly.
+Duplicate JSON fields and listener identities are rejected.

@@ -57,3 +57,17 @@ def test_snapshot_file_format_follows_extension(tmp_path, extension):
     path = tmp_path / f"ports.{extension}"
     path.write_text('{"port":3000,"protocol":"tcp","status":"LISTENING"}\n')
     assert load_snapshot(path)[0].port == 3000
+
+
+def test_import_dashboard_snapshots_and_latest_watch_record(tmp_path):
+    from portwatch.services.snapshots import decode_json_lines, decode_snapshot
+
+    row = {"port": 3000, "protocol": "tcp", "status": "LISTENING"}
+    assert decode_snapshot({"ports": [row], "scanned_at": "2026-01-01"})[0].port == 3000
+    assert (
+        decode_json_lines('{"ports":[]}\n' + __import__("json").dumps({"ports": [row]}))[0].port
+        == 3000
+    )
+    assert decode_json_lines('{"ports":["bad"]}\n{"ports":[]}') == []
+    with pytest.raises(ValueError):
+        decode_snapshot({"ports": "bad"})

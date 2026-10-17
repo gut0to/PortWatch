@@ -14,6 +14,8 @@ from portwatch.utils.ports import validate_port
 
 
 def decode_snapshot(data: object) -> list[PortInfo]:
+    if isinstance(data, dict) and "ports" in data:
+        data = data["ports"]
     if not isinstance(data, list):
         raise ValueError("A snapshot must be a JSON array of listeners.")
     seen: set[tuple[int, str, int, str]] = set()
@@ -144,4 +146,6 @@ def decode_json_lines(text: str) -> list[PortInfo]:
             rows.append(json.loads(line, object_pairs_hook=_unique_fields))
         except ValueError as error:
             raise ValueError(f"Invalid JSON on line {line_number}: {error}") from error
+    if rows and all(isinstance(row, dict) and "ports" in row for row in rows):
+        return decode_snapshot(rows[-1])
     return decode_snapshot(rows)
