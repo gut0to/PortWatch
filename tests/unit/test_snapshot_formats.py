@@ -1,3 +1,5 @@
+from datetime import UTC
+
 import pytest
 
 from portwatch.services.snapshots import load_snapshot
@@ -26,3 +28,17 @@ def test_duplicate_listener_records_cannot_silently_overwrite_each_other():
     row = port_to_dict(PortInfo(3000, "tcp", "LISTENING", pid=42))
     with pytest.raises(ValueError, match="Duplicate listener identity"):
         decode_snapshot([row, {**row, "command": "different"}])
+
+
+def test_equivalent_timestamp_offsets_preserve_listener_identity():
+    from dataclasses import replace
+    from datetime import datetime, timedelta, timezone
+
+    from portwatch.domain.models import PortInfo
+    from portwatch.services.snapshots import diff_snapshots
+
+    first = PortInfo(
+        3000, "tcp", "LISTENING", pid=42, started_at=datetime(2026, 1, 1, tzinfo=UTC)
+    )
+    second = replace(first, started_at=first.started_at.astimezone(timezone(timedelta(hours=-3))))
+    assert not any(diff_snapshots([first], [second]).values())

@@ -4,7 +4,7 @@ import json
 import os
 import tempfile
 from dataclasses import replace
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
 
@@ -72,7 +72,7 @@ def _identity(item: PortInfo) -> tuple[int, str, int, str]:
         item.port,
         item.protocol,
         item.pid or -1,
-        item.started_at.isoformat() if item.started_at else "",
+        item.started_at.astimezone(UTC).isoformat() if item.started_at else "",
     )
 
 
