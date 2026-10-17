@@ -3,6 +3,7 @@ import math
 import time
 import webbrowser
 from collections.abc import Callable
+from contextlib import ExitStack
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
@@ -309,6 +310,9 @@ def free(
 @app.command()
 @report_system_errors
 def watch(
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Write a new UTF-8 JSON Lines watch log.")
+    ] = None,
     redact: Annotated[
         bool, typer.Option("--redact", help="Hide commands and working directories.")
     ] = False,
@@ -365,22 +369,37 @@ def watch(
         sleep=time.sleep,
     )
     try:
-        if as_json:
-            for ports in snapshots:
-                if redact:
-                    ports = redact_snapshot(ports)
-                typer.echo(
-                    json.dumps(
+        with ExitStack() as stack:
+            try:
+                stream = (
+                    stack.enter_context(output.open("x", encoding="utf-8", newline="\n"))
+                    if output is not None
+                    else None
+                )
+            except FileExistsError:
+                _fail("The watch log already exists. Choose a new output path.", 2)
+            if as_json or stream is not None:
+                for ports in snapshots:
+                    payload = json.dumps(
                         {
-                            "ports": [port_to_dict(item) for item in ports],
+                            "ports": [
+                                port_to_dict(item)
+                                for item in (redact_snapshot(ports) if redact else ports)
+                            ],
                             "scanned_at": datetime.now().astimezone().isoformat(),
                         }
                     )
-                )
-        else:
-            with Live(console=console, refresh_per_second=max(1, int(1 / interval))) as live:
-                for ports in snapshots:
-                    live.update(watch_view(redact_snapshot(ports) if redact else ports, interval))
+                    if stream is None:
+                        typer.echo(payload)
+                    else:
+                        stream.write(payload + "\n")
+                        stream.flush()
+            else:
+                with Live(console=console, refresh_per_second=max(1, int(1 / interval))) as live:
+                    for ports in snapshots:
+                        live.update(
+                            watch_view(redact_snapshot(ports) if redact else ports, interval)
+                        )
     except KeyboardInterrupt:
         return
 
