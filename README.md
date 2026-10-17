@@ -215,3 +215,48 @@ snapshot. The first snapshot is always emitted, including when empty. `--count`
 counts scan attempts, including suppressed duplicates. Reordering alone is not
 a change. Watch accepts the same `--pid`, `--process`, and `--project` filters
 as listener queries.
+
+
+### Importing snapshots from other workflows
+
+`diff` accepts UTF-8 files with or without a BOM. Files ending in `.jsonl` or
+`.ndjson` are read as JSON Lines; blank lines are ignored. Listener arrays and
+dashboard `{ "ports": [...] }` responses are accepted. For a JSON Lines watch
+log, the last complete snapshot is used. Invalid final records fail explicitly.
+Duplicate JSON fields and listener identities are rejected.
+
+
+`diff` supports `--ports`, shared `--search` expressions, and repeatable
+`--ignore command` / `--ignore working_directory` / `--ignore process_name` /
+`--ignore project_name` options. Identity fields cannot be ignored. Use `--csv`
+for a report with change and before/after columns, or `--output` to save JSON
+by default. Existing reports require `--overwrite`.
+`--redact` hides commands and directories after comparison, preserving the
+presence of sensitive metadata changes without exposing their values.
+
+
+`summary` accepts `--ports`, `--exclude`, `--pid`, `--process`, `--project`,
+and `--exact` in addition to search and range filtering. Grouped rows can be
+sorted with `--sort name|listeners|ports|processes|projects` and `--descending`.
+`--output report.json` saves the JSON summary; replacement requires `--overwrite`.
+
+
+`watch` accepts disjoint `--ports` selections, `--exclude`, `--exact`, and
+`--redact`. `--output watch.jsonl` creates a new UTF-8 log and flushes each
+snapshot to disk; existing files are never replaced. This output can be read
+by `diff`, which uses its latest snapshot. `--skip-initial` establishes the
+first scan as a baseline without emitting it, while still counting that scan
+toward `--count`. Combine it with `--changes-only` to emit only later changes.
+`next --exclude 3000-3010` avoids reserved ports even when they are currently free.
+
+
+`portwatch inspect 3000 --all` shows every discovered owner of the selected
+port. With `--json`, `--all` returns an array; the existing single-owner command
+continues to return one object. Project detection reuses working-directory
+results only within a scan, so later scans still observe filesystem changes.
+
+
+`portwatch doctor --json` reports the application, Python, operating system,
+architecture, psutil version, and whether the local TCP scan succeeds. It does
+not inspect command lines or terminate processes. An unavailable scan returns
+1, or 4 for insufficient permissions, while preserving the JSON diagnostic data.

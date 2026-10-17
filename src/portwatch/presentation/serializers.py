@@ -37,3 +37,25 @@ def _csv_value(value: object) -> object:
     if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@", "\t", "\r")):
         return "'" + value
     return value
+
+
+def changes_to_csv(changes: dict[str, list[dict[str, object]]]) -> str:
+    output = io.StringIO(newline="")
+    writer = csv.DictWriter(
+        output, fieldnames=["change", "side", *PortInfo.__dataclass_fields__], lineterminator="\n"
+    )
+    writer.writeheader()
+    for kind, rows in changes.items():
+        for row in rows:
+            sides = ("before", "after") if kind == "changed" else ("listener",)
+            for side in sides:
+                data = row[side] if kind == "changed" else row
+                assert isinstance(data, dict)
+                writer.writerow(
+                    {
+                        "change": kind,
+                        "side": side,
+                        **{key: _csv_value(value) for key, value in data.items()},
+                    }
+                )
+    return output.getvalue().rstrip("\n")

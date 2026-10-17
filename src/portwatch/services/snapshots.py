@@ -4,7 +4,7 @@ import json
 import os
 import tempfile
 from dataclasses import replace
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
 
@@ -14,8 +14,11 @@ from portwatch.utils.ports import validate_port
 
 
 def decode_snapshot(data: object) -> list[PortInfo]:
+    if isinstance(data, dict) and "ports" in data:
+        data = data["ports"]
     if not isinstance(data, list):
         raise ValueError("A snapshot must be a JSON array of listeners.")
+    seen: set[tuple[int, str, int, str]] = set()
     ports: list[PortInfo] = []
     for row in data:
         if not isinstance(row, dict) or not {"port", "protocol", "status"} <= row.keys():
@@ -48,6 +51,10 @@ def decode_snapshot(data: object) -> list[PortInfo]:
                 started_at=datetime.fromisoformat(started) if started is not None else None,
             )
         )
+        key = _identity(ports[-1])
+        if key in seen:
+            raise ValueError("Duplicate listener identity in snapshot.")
+        seen.add(key)
     return ports
 
 
@@ -59,7 +66,10 @@ def load_snapshot(path: Path) -> list[PortInfo]:
         raw = source.read(MAX_SNAPSHOT_BYTES + 1)
     if len(raw) > MAX_SNAPSHOT_BYTES:
         raise ValueError("Snapshot files must be at most 10 MiB.")
-    return decode_snapshot(json.loads(raw.decode("utf-8")))
+    text = raw.decode("utf-8-sig")
+    if path.suffix.casefold() in {".jsonl", ".ndjson"}:
+        return decode_json_lines(text)
+    return decode_snapshot(json.loads(text, object_pairs_hook=_unique_fields))
 
 
 def _identity(item: PortInfo) -> tuple[int, str, int, str]:
@@ -67,13 +77,17 @@ def _identity(item: PortInfo) -> tuple[int, str, int, str]:
         item.port,
         item.protocol,
         item.pid or -1,
-        item.started_at.isoformat() if item.started_at else "",
+        item.started_at.astimezone(UTC).isoformat() if item.started_at else "",
     )
 
 
 def diff_snapshots(
-    before: list[PortInfo], after: list[PortInfo]
+    before: list[PortInfo], after: list[PortInfo], *, ignore_fields: frozenset[str] = frozenset()
 ) -> dict[str, list[dict[str, object]]]:
+    if ignore_fields - {"command", "working_directory", "process_name", "project_name"}:
+        raise ValueError(
+            "Only command, working_directory, process_name, and project_name can be ignored."
+        )
     previous = {_identity(item): item for item in before}
     current = {_identity(item): item for item in after}
     return {
@@ -81,7 +95,16 @@ def diff_snapshots(
         "changed": [
             {"before": port_to_dict(previous[key]), "after": port_to_dict(current[key])}
             for key in sorted(previous.keys() & current.keys())
-            if previous[key] != current[key]
+            if {
+                field: value
+                for field, value in port_to_dict(previous[key]).items()
+                if field not in ignore_fields and field != "started_at"
+            }
+            != {
+                field: value
+                for field, value in port_to_dict(current[key]).items()
+                if field not in ignore_fields and field != "started_at"
+            }
         ],
         "removed": [
             port_to_dict(previous[key]) for key in sorted(previous.keys() - current.keys())
@@ -116,3 +139,46 @@ def write_snapshot(path: Path, content: str, *, overwrite: bool = False) -> None
 def redact_snapshot(ports: list[PortInfo]) -> list[PortInfo]:
     """Remove command lines and local paths while retaining comparison identities."""
     return [replace(item, command=None, working_directory=None) for item in ports]
+
+
+def _unique_fields(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"Duplicate snapshot field: {key}.")
+        result[key] = value
+    return result
+
+
+def decode_json_lines(text: str) -> list[PortInfo]:
+    rows: list[object] = []
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            rows.append(json.loads(line, object_pairs_hook=_unique_fields))
+        except ValueError as error:
+            raise ValueError(f"Invalid JSON on line {line_number}: {error}") from error
+    if rows and all(isinstance(row, dict) and "ports" in row for row in rows):
+        return decode_snapshot(rows[-1])
+    return decode_snapshot(rows)
+
+
+def redact_changes(
+    changes: dict[str, list[dict[str, object]]],
+) -> dict[str, list[dict[str, object]]]:
+    def clean(row: dict[str, object]) -> dict[str, object]:
+        return {**row, "command": None, "working_directory": None}
+
+    return {
+        kind: [
+            {
+                "before": clean(cast(dict[str, object], row["before"])),
+                "after": clean(cast(dict[str, object], row["after"])),
+            }
+            if kind == "changed"
+            else clean(row)
+            for row in rows
+        ]
+        for kind, rows in changes.items()
+    }

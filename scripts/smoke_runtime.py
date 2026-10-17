@@ -79,10 +79,11 @@ def verify_runtime(command: list[str]) -> None:
 
         assert "PortWatch" in run("--version")
         assert "dashboard" in run("--help")
+        assert json.loads(run("doctor", "--json"))["scan"] == "ok"
         run("inspect", "0", "--json", expected=2)
         fixture_code = (
             "import socket,time,os; s=socket.socket(); s.bind(('127.0.0.1',0)); "
-            "s.listen(); print(s.getsockname()[1],os.getpid(),flush=True); time.sleep(90)"
+            "s.listen(); print(s.getsockname()[1],os.getpid(),flush=True); time.sleep(180)"
         )
         fixture = subprocess.Popen(
             [sys.executable, "-u", "-c", fixture_code],
@@ -98,6 +99,8 @@ def verify_runtime(command: list[str]) -> None:
             assert any(item["port"] == port and item["pid"] == fixture_pid for item in listed)
             inspected = json.loads(run("inspect", str(port), "--json"))
             assert inspected["pid"] == fixture_pid
+            owners = json.loads(run("inspect", str(port), "--all", "--json"))
+            assert any(item["pid"] == fixture_pid for item in owners)
             assert int(run("next", str(port))) > port
             batch = json.loads(run("next", str(port), "--count", "2", "--json"))["ports"]
             assert len(set(batch)) == 2 and all(candidate > port for candidate in batch)
@@ -115,6 +118,34 @@ def verify_runtime(command: list[str]) -> None:
             assert saved and all(item["command"] is None for item in saved)
             changes = json.loads(run("diff", str(snapshot), str(snapshot), "--json", "--exit-code"))
             assert not any(changes.values())
+            line_snapshot = Path(working_directory, "ports.jsonl")
+            assert not run(
+                "list",
+                "--ports",
+                str(port),
+                "--redact",
+                "--json-lines",
+                "--output",
+                str(line_snapshot),
+            )
+            changes = json.loads(run("diff", str(snapshot), str(line_snapshot), "--json"))
+            assert not any(changes.values())
+            watch_log = Path(working_directory, "watch.jsonl")
+            assert not run(
+                "watch",
+                "--ports",
+                str(port),
+                "--count",
+                "1",
+                "--redact",
+                "--output",
+                str(watch_log),
+            )
+            changes = json.loads(run("diff", str(snapshot), str(watch_log), "--json"))
+            assert not any(changes.values())
+            summary_file = Path(working_directory, "summary.json")
+            assert not run("summary", "--ports", str(port), "--output", str(summary_file))
+            assert json.loads(summary_file.read_text(encoding="utf-8"))["listeners"] >= 1
             watched = [
                 json.loads(line)
                 for line in run(

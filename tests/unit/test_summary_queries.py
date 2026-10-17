@@ -1,0 +1,77 @@
+import json
+
+import pytest
+from typer.testing import CliRunner
+
+import portwatch.cli as cli
+from portwatch.domain.models import PortInfo
+
+
+@pytest.fixture
+def listeners(monkeypatch):
+    items = [
+        PortInfo(3000, "tcp", "LISTENING", pid=10, process_name="python", project_name="API"),
+        PortInfo(3001, "tcp", "LISTENING", pid=10, process_name="python", project_name="API"),
+        PortInfo(4000, "tcp", "LISTENING", pid=20, process_name="node", project_name="UI"),
+    ]
+    monkeypatch.setattr(cli.service, "list_ports", lambda bounds=None: items)
+    return items
+
+
+def invoke(*args):
+    return CliRunner().invoke(cli.app, ["summary", *args])
+
+
+def test_summary_disjoint_ports_and_exclusions(listeners):
+    result = invoke("--ports", "3000-4000", "--exclude", "3001", "--json")
+    assert result.exit_code == 0
+    assert json.loads(result.stdout)["listeners"] == 2
+    assert invoke("--ports", "0").exit_code == 2
+
+
+def test_summary_pid_filter_counts_one_process_with_multiple_ports(listeners):
+    result = invoke("--pid", "10", "--json")
+    data = json.loads(result.stdout)
+    assert data["listeners"] == 2 and data["processes"] == 1
+    assert invoke("--pid", "0").exit_code == 2
+
+
+def test_summary_exact_name_filters_combine(listeners):
+    result = invoke("--process", "PYTHON", "--project", "api", "--exact", "--json")
+    assert json.loads(result.stdout)["listeners"] == 2
+    assert json.loads(invoke("--process", "py", "--exact", "--json").stdout)["listeners"] == 0
+
+
+def test_summary_file_output_protects_existing_reports(listeners, tmp_path):
+    path = tmp_path / "summary.json"
+    result = invoke("--output", str(path), "--group", "process")
+    assert result.exit_code == 0 and result.stdout == ""
+    assert json.loads(path.read_text())["processes"] == 2
+    assert invoke("--output", str(path)).exit_code == 2
+    assert invoke("--output", str(path), "--overwrite").exit_code == 0
+    assert invoke("--overwrite").exit_code == 2
+
+
+def test_summary_group_sorting(listeners):
+    report = json.loads(
+        invoke("--group", "process", "--sort", "listeners", "--descending", "--json").stdout
+    )
+    assert [row["name"] for row in report["groups"]] == ["python", "node"]
+    assert invoke("--sort", "listeners").exit_code == 2
+
+
+def test_next_excludes_reserved_ports_and_keeps_single_json_contract(monkeypatch):
+    from unittest.mock import Mock
+
+    from portwatch.services.port_service import PortService
+
+    scanner = Mock()
+    scanner.list_listening_ports.return_value = []
+    monkeypatch.setattr(cli, "service", PortService(scanner=scanner))
+    result = CliRunner().invoke(cli.app, ["next", "3000", "--exclude", "3000-3002", "--json"])
+    assert json.loads(result.stdout) == {"start": 3000, "port": 3003, "available": False}
+    result = CliRunner().invoke(
+        cli.app, ["next", "3000", "--exclude", "3001", "--count", "2", "--json"]
+    )
+    assert json.loads(result.stdout)["ports"] == [3000, 3002]
+    assert CliRunner().invoke(cli.app, ["next", "3000", "--exclude", "bad"]).exit_code == 2

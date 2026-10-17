@@ -1,13 +1,16 @@
 import json
 import math
+import platform
 import time
 import webbrowser
 from collections.abc import Callable
+from contextlib import ExitStack
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import Annotated, NoReturn
+from typing import Annotated, NoReturn, cast
 
+import psutil
 import typer
 from rich.console import Console
 from rich.live import Live
@@ -22,6 +25,7 @@ from portwatch.domain.models import PortInfo
 from portwatch.presentation.console import format_port_count, print_inspection
 from portwatch.presentation.errors import report_system_errors
 from portwatch.presentation.serializers import (
+    changes_to_csv,
     port_to_dict,
     ports_to_csv,
     ports_to_json,
@@ -35,12 +39,21 @@ from portwatch.services.reports import group_ports, summarize_ports
 from portwatch.services.snapshots import (
     diff_snapshots,
     load_snapshot,
+    redact_changes,
     redact_snapshot,
     write_snapshot,
 )
 from portwatch.system.termination import ProcessTerminator
 from portwatch.utils.ports import parse_port_range, parse_port_selection, validate_port
 from portwatch.web.server import create_server
+
+
+class GroupSortField(StrEnum):
+    name = "name"
+    listeners = "listeners"
+    ports = "ports"
+    processes = "processes"
+    projects = "projects"
 
 
 class GroupField(StrEnum):
@@ -202,24 +215,33 @@ def list_ports(
 @report_system_errors
 def inspect(
     port: Annotated[int, typer.Argument(help="Port to inspect.")],
+    all_owners: Annotated[
+        bool, typer.Option("--all", help="Inspect every process owning this port.")
+    ] = False,
     as_json: Annotated[bool, typer.Option("--json", help="Print machine-readable JSON.")] = False,
 ) -> None:
     try:
-        item = service.inspect(port)
+        items = service.inspect_all(port) if all_owners else [service.inspect(port)]
     except (InvalidPortError, PortNotFoundError) as error:
         if isinstance(error, PortNotFoundError):
             _fail(str(error), 3)
         _fail(str(error), 2)
     if as_json:
-        typer.echo(json.dumps(port_to_dict(item), indent=2))
+        typer.echo(
+            ports_to_json(items) if all_owners else json.dumps(port_to_dict(items[0]), indent=2)
+        )
     else:
-        print_inspection(console, item)
+        for item in items:
+            print_inspection(console, item)
 
 
 @app.command()
 @report_system_errors
 def next(
     port: Annotated[int, typer.Argument(help="Starting port.")],
+    exclude: Annotated[
+        str | None, typer.Option("--exclude", help="Skip reserved ports and ranges.")
+    ] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Print machine-readable JSON.")] = False,
     count: Annotated[
         int, typer.Option("--count", min=1, max=65535, help="Number of free ports needed.")
@@ -229,15 +251,25 @@ def next(
     ] = 65535,
     verbose: Annotated[bool, typer.Option("--verbose", help="Explain the result.")] = False,
 ) -> None:
-    if count > 1:
+    try:
+        excluded = parse_port_selection(exclude) if exclude is not None else frozenset()
+    except InvalidPortError as error:
+        _fail(str(error), 2)
+    if count > 1 or excluded:
         try:
-            found = service.available_ports(port, count, end)
+            found = service.available_ports(port, count, end, excluded=excluded)
         except InvalidPortError as error:
             _fail(str(error), 2)
         except PortNotFoundError as error:
             _fail(str(error), 3)
         if as_json:
-            typer.echo(json.dumps({"start": port, "ports": found}))
+            typer.echo(
+                json.dumps(
+                    {"start": port, "ports": found}
+                    if count > 1
+                    else {"start": port, "port": found[0], "available": found[0] == port}
+                )
+            )
         else:
             for candidate in found:
                 typer.echo(f"Available port: {candidate}" if verbose else str(candidate))
@@ -286,6 +318,24 @@ def free(
 @app.command()
 @report_system_errors
 def watch(
+    skip_initial: Annotated[
+        bool, typer.Option("--skip-initial", help="Establish a baseline without emitting it.")
+    ] = False,
+    exact: Annotated[
+        bool, typer.Option("--exact", help="Require exact process and project names.")
+    ] = False,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Write a new UTF-8 JSON Lines watch log.")
+    ] = None,
+    redact: Annotated[
+        bool, typer.Option("--redact", help="Hide commands and working directories.")
+    ] = False,
+    selected_ports: Annotated[
+        str | None, typer.Option("--ports", help="Watch selected ports and ranges.")
+    ] = None,
+    exclude: Annotated[
+        str | None, typer.Option("--exclude", help="Exclude ports and ranges.")
+    ] = None,
     search: Annotated[str, typer.Option("--search", help="Filter listener metadata.")] = "",
     pid: Annotated[int | None, typer.Option("--pid", min=1, help="Filter process IDs.")] = None,
     process: Annotated[str, typer.Option("--process", help="Filter process names.")] = "",
@@ -309,33 +359,67 @@ def watch(
     if not math.isfinite(interval):
         _fail("Refresh interval must be finite.", 2)
     try:
+        selection = parse_port_selection(selected_ports) if selected_ports is not None else None
+        excluded = parse_port_selection(exclude) if exclude is not None else frozenset()
         parsed_range = parse_port_range(port_range) if port_range else None
     except InvalidPortError as error:
         _fail(str(error), 2)
+
+    def scan_selected() -> list[PortInfo]:
+        ports = filter_ports(
+            service.list_ports(parsed_range),
+            search,
+            pid=pid,
+            process=process,
+            project=project,
+            exact=exact,
+        )
+        return [
+            item
+            for item in ports
+            if (selection is None or item.port in selection) and item.port not in excluded
+        ]
+
     snapshots = watch_snapshots(
-        lambda: filter_ports(
-            service.list_ports(parsed_range), search, pid=pid, process=process, project=project
-        ),
+        scan_selected,
         interval,
         count,
         changes_only=changes_only,
+        skip_initial=skip_initial,
         sleep=time.sleep,
     )
     try:
-        if as_json:
-            for ports in snapshots:
-                typer.echo(
-                    json.dumps(
+        with ExitStack() as stack:
+            try:
+                stream = (
+                    stack.enter_context(output.open("x", encoding="utf-8", newline="\n"))
+                    if output is not None
+                    else None
+                )
+            except FileExistsError:
+                _fail("The watch log already exists. Choose a new output path.", 2)
+            if as_json or stream is not None:
+                for ports in snapshots:
+                    payload = json.dumps(
                         {
-                            "ports": [port_to_dict(item) for item in ports],
+                            "ports": [
+                                port_to_dict(item)
+                                for item in (redact_snapshot(ports) if redact else ports)
+                            ],
                             "scanned_at": datetime.now().astimezone().isoformat(),
                         }
                     )
-                )
-        else:
-            with Live(console=console, refresh_per_second=max(1, int(1 / interval))) as live:
-                for ports in snapshots:
-                    live.update(watch_view(ports, interval))
+                    if stream is None:
+                        typer.echo(payload)
+                    else:
+                        stream.write(payload + "\n")
+                        stream.flush()
+            else:
+                with Live(console=console, refresh_per_second=max(1, int(1 / interval))) as live:
+                    for ports in snapshots:
+                        live.update(
+                            watch_view(redact_snapshot(ports) if redact else ports, interval)
+                        )
     except KeyboardInterrupt:
         return
 
@@ -419,6 +503,30 @@ def _fail(message: str, code: int) -> NoReturn:
 @app.command()
 @report_system_errors
 def summary(
+    sort: Annotated[
+        GroupSortField, typer.Option("--sort", help="Order grouped summary rows.")
+    ] = GroupSortField.name,
+    descending: Annotated[
+        bool, typer.Option("--descending", help="Reverse grouped row order.")
+    ] = False,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Save a JSON summary.")
+    ] = None,
+    overwrite: Annotated[
+        bool, typer.Option("--overwrite", help="Replace an existing summary.")
+    ] = False,
+    process: Annotated[str, typer.Option("--process", help="Filter process names.")] = "",
+    project: Annotated[str, typer.Option("--project", help="Filter project names.")] = "",
+    exact: Annotated[
+        bool, typer.Option("--exact", help="Require exact process and project names.")
+    ] = False,
+    pid: Annotated[int | None, typer.Option("--pid", min=1, help="Summarize a process ID.")] = None,
+    selected_ports: Annotated[
+        str | None, typer.Option("--ports", help="Select ports and ranges.")
+    ] = None,
+    exclude: Annotated[
+        str | None, typer.Option("--exclude", help="Exclude ports and ranges.")
+    ] = None,
     group: Annotated[
         GroupField, typer.Option("--group", help="Group listener totals.")
     ] = GroupField.none,
@@ -427,21 +535,52 @@ def summary(
     as_json: Annotated[bool, typer.Option("--json", help="Print JSON totals.")] = False,
 ) -> None:
     """Summarize local TCP listeners without counting duplicate owners twice."""
+    if group == GroupField.none and (sort != GroupSortField.name or descending):
+        _fail("Group sorting requires --group.", 2)
+    if overwrite and output is None:
+        _fail("--overwrite requires --output.", 2)
     try:
+        selection = parse_port_selection(selected_ports) if selected_ports is not None else None
+        excluded = parse_port_selection(exclude) if exclude is not None else frozenset()
         bounds = parse_port_range(port_range) if port_range else None
-        ports = filter_ports(service.list_ports(bounds), search)
+        ports = filter_ports(
+            service.list_ports(bounds),
+            search,
+            pid=pid,
+            process=process,
+            project=project,
+            exact=exact,
+        )
     except InvalidPortError as error:
         _fail(str(error), 2)
+    ports = [
+        item
+        for item in ports
+        if (selection is None or item.port in selection) and item.port not in excluded
+    ]
     totals = summarize_ports(ports)
     groups = (
         group_ports(ports, "project_name" if group == GroupField.project else "process_name")
         if group != GroupField.none
         else []
     )
+    groups.sort(
+        key=lambda row: (
+            str(row["name"]).casefold()
+            if sort == GroupSortField.name
+            else cast(int, row[sort.value])
+        ),
+        reverse=descending,
+    )
     report: dict[str, object] = dict(totals)
     if group != GroupField.none:
         report["groups"] = groups
-    if as_json:
+    if output is not None:
+        try:
+            write_snapshot(output, json.dumps(report, indent=2), overwrite=overwrite)
+        except FileExistsError:
+            _fail("The output file exists. Use --overwrite to replace it.", 2)
+    elif as_json:
         typer.echo(json.dumps(report))
     else:
         for label, value in totals.items():
@@ -456,6 +595,26 @@ def compare_snapshots(
     before: Annotated[
         Path, typer.Argument(exists=True, dir_okay=False, help="Earlier JSON snapshot.")
     ],
+    ignore: Annotated[
+        list[str] | None,
+        typer.Option("--ignore", help="Ignore a metadata field; repeat as needed."),
+    ] = None,
+    selected_ports: Annotated[
+        str | None, typer.Option("--ports", help="Compare selected ports and ranges.")
+    ] = None,
+    search: Annotated[
+        str, typer.Option("--search", help="Filter metadata in both snapshots.")
+    ] = "",
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Save JSON differences.")
+    ] = None,
+    overwrite: Annotated[
+        bool, typer.Option("--overwrite", help="Replace an existing report.")
+    ] = False,
+    redact: Annotated[
+        bool, typer.Option("--redact", help="Hide command lines and directories in reports.")
+    ] = False,
+    as_csv: Annotated[bool, typer.Option("--csv", help="Print CSV differences.")] = False,
     after: Annotated[
         Path | None,
         typer.Argument(exists=True, dir_okay=False, help="Later snapshot; omit to scan now."),
@@ -468,13 +627,38 @@ def compare_snapshots(
     ] = False,
 ) -> None:
     """Compare saved snapshots or compare one snapshot with live listeners."""
+    if as_csv and as_json:
+        _fail("Choose either --json or --csv.", 2)
+    if overwrite and output is None:
+        _fail("--overwrite requires --output.", 2)
     try:
+        selection = parse_port_selection(selected_ports) if selected_ports is not None else None
+        previous = load_snapshot(before)
+        current = load_snapshot(after) if after else service.list_ports()
+        if selection is not None:
+            previous = [item for item in previous if item.port in selection]
+            current = [item for item in current if item.port in selection]
         changes = diff_snapshots(
-            load_snapshot(before), load_snapshot(after) if after else service.list_ports()
+            filter_ports(previous, search),
+            filter_ports(current, search),
+            ignore_fields=frozenset(ignore or []),
         )
     except ValueError as error:
         _fail(f"Invalid snapshot: {error}", 2)
-    if as_json:
+    if redact:
+        changes = redact_changes(changes)
+    if output is not None:
+        try:
+            write_snapshot(
+                output,
+                changes_to_csv(changes) if as_csv else json.dumps(changes, indent=2),
+                overwrite=overwrite,
+            )
+        except FileExistsError:
+            _fail("The output file exists. Use --overwrite to replace it.", 2)
+    elif as_csv:
+        typer.echo(changes_to_csv(changes))
+    elif as_json:
         typer.echo(json.dumps(changes, indent=2))
     else:
         for kind, rows in changes.items():
@@ -483,3 +667,36 @@ def compare_snapshots(
                 console.print(Text(json.dumps(row, ensure_ascii=False)))
     if exit_code and any(changes.values()):
         raise typer.Exit(code=6)
+
+
+@app.command()
+def doctor(
+    as_json: Annotated[
+        bool, typer.Option("--json", help="Print local diagnostic results as JSON.")
+    ] = False,
+) -> None:
+    """Check the local runtime and TCP scanner without terminating processes."""
+    from portwatch import __version__
+
+    report: dict[str, object] = {
+        "portwatch": __version__,
+        "python": platform.python_version(),
+        "platform": platform.system(),
+        "architecture": platform.machine(),
+        "psutil": psutil.__version__,
+    }
+    code = 0
+    try:
+        report["listeners"] = len(service.scanner.list_listening_ports())
+        report["scan"] = "ok"
+    except OSError as error:
+        report["scan"] = "unavailable"
+        report["error"] = str(error)
+        code = 4 if isinstance(error, PermissionError) else 1
+    if as_json:
+        typer.echo(json.dumps(report))
+    else:
+        for label, value in report.items():
+            console.print(Text(f"{label}: {value}"))
+    if code:
+        raise typer.Exit(code=code)
