@@ -310,6 +310,9 @@ def free(
 @app.command()
 @report_system_errors
 def watch(
+    exact: Annotated[
+        bool, typer.Option("--exact", help="Require exact process and project names.")
+    ] = False,
     output: Annotated[
         Path | None, typer.Option("--output", "-o", help="Write a new UTF-8 JSON Lines watch log.")
     ] = None,
@@ -353,7 +356,12 @@ def watch(
 
     def scan_selected() -> list[PortInfo]:
         ports = filter_ports(
-            service.list_ports(parsed_range), search, pid=pid, process=process, project=project
+            service.list_ports(parsed_range),
+            search,
+            pid=pid,
+            process=process,
+            project=project,
+            exact=exact,
         )
         return [
             item

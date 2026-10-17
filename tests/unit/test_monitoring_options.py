@@ -58,3 +58,9 @@ def test_watch_file_log_round_trips_and_never_overwrites(listeners, tmp_path):
     before = path.read_bytes()
     assert invoke("--output", str(path)).exit_code == 2
     assert path.read_bytes() == before
+
+
+def test_watch_exact_process_filter(listeners):
+    result = invoke("--process", "PYTHON", "--exact", "--json")
+    assert result.exit_code == 0
+    assert [item["port"] for item in json.loads(result.stdout.splitlines()[0])["ports"]] == [3000]
