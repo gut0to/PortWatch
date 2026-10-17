@@ -309,6 +309,9 @@ def free(
 @app.command()
 @report_system_errors
 def watch(
+    redact: Annotated[
+        bool, typer.Option("--redact", help="Hide commands and working directories.")
+    ] = False,
     selected_ports: Annotated[
         str | None, typer.Option("--ports", help="Watch selected ports and ranges.")
     ] = None,
@@ -364,6 +367,8 @@ def watch(
     try:
         if as_json:
             for ports in snapshots:
+                if redact:
+                    ports = redact_snapshot(ports)
                 typer.echo(
                     json.dumps(
                         {
@@ -375,7 +380,7 @@ def watch(
         else:
             with Live(console=console, refresh_per_second=max(1, int(1 / interval))) as live:
                 for ports in snapshots:
-                    live.update(watch_view(ports, interval))
+                    live.update(watch_view(redact_snapshot(ports) if redact else ports, interval))
     except KeyboardInterrupt:
         return
 
