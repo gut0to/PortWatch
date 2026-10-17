@@ -130,3 +130,15 @@ def _unique_fields(pairs: list[tuple[str, object]]) -> dict[str, object]:
             raise ValueError(f"Duplicate snapshot field: {key}.")
         result[key] = value
     return result
+
+
+def decode_json_lines(text: str) -> list[PortInfo]:
+    rows: list[object] = []
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            rows.append(json.loads(line, object_pairs_hook=_unique_fields))
+        except ValueError as error:
+            raise ValueError(f"Invalid JSON on line {line_number}: {error}") from error
+    return decode_snapshot(rows)

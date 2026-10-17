@@ -37,8 +37,16 @@ def test_equivalent_timestamp_offsets_preserve_listener_identity():
     from portwatch.domain.models import PortInfo
     from portwatch.services.snapshots import diff_snapshots
 
-    first = PortInfo(
-        3000, "tcp", "LISTENING", pid=42, started_at=datetime(2026, 1, 1, tzinfo=UTC)
-    )
+    first = PortInfo(3000, "tcp", "LISTENING", pid=42, started_at=datetime(2026, 1, 1, tzinfo=UTC))
     second = replace(first, started_at=first.started_at.astimezone(timezone(timedelta(hours=-3))))
     assert not any(diff_snapshots([first], [second]).values())
+
+
+def test_json_lines_decode_blank_lines_and_report_bad_lines():
+    from portwatch.services.snapshots import decode_json_lines
+
+    row = '{"port":3000,"protocol":"tcp","status":"LISTENING"}'
+    assert decode_json_lines("\n" + row + "\n\n")[0].port == 3000
+    assert decode_json_lines("") == []
+    with pytest.raises(ValueError, match="line 2"):
+        decode_json_lines(row + "\nbad")
