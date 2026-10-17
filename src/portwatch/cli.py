@@ -466,6 +466,12 @@ def compare_snapshots(
     search: Annotated[
         str, typer.Option("--search", help="Filter metadata in both snapshots.")
     ] = "",
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Save JSON differences.")
+    ] = None,
+    overwrite: Annotated[
+        bool, typer.Option("--overwrite", help="Replace an existing report.")
+    ] = False,
     after: Annotated[
         Path | None,
         typer.Argument(exists=True, dir_okay=False, help="Later snapshot; omit to scan now."),
@@ -478,6 +484,8 @@ def compare_snapshots(
     ] = False,
 ) -> None:
     """Compare saved snapshots or compare one snapshot with live listeners."""
+    if overwrite and output is None:
+        _fail("--overwrite requires --output.", 2)
     try:
         selection = parse_port_selection(selected_ports) if selected_ports is not None else None
         previous = load_snapshot(before)
@@ -492,7 +500,12 @@ def compare_snapshots(
         )
     except ValueError as error:
         _fail(f"Invalid snapshot: {error}", 2)
-    if as_json:
+    if output is not None:
+        try:
+            write_snapshot(output, json.dumps(changes, indent=2), overwrite=overwrite)
+        except FileExistsError:
+            _fail("The output file exists. Use --overwrite to replace it.", 2)
+    elif as_json:
         typer.echo(json.dumps(changes, indent=2))
     else:
         for kind, rows in changes.items():

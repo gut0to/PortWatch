@@ -58,3 +58,13 @@ def test_diff_metadata_search(files):
     data = json.loads(result.stdout)
     assert data["added"] == data["removed"] == []
     assert len(data["changed"]) == 1
+
+
+def test_diff_output_file_and_difference_exit_code(files, tmp_path):
+    path = tmp_path / "changes.json"
+    result = invoke(files, "--output", str(path), "--exit-code")
+    assert result.exit_code == 6 and result.stdout == ""
+    assert len(json.loads(path.read_text())["changed"]) == 1
+    assert invoke(files, "--output", str(path)).exit_code == 2
+    assert invoke(files, "--output", str(path), "--overwrite").exit_code == 0
+    assert invoke(files, "--overwrite").exit_code == 2
