@@ -61,3 +61,26 @@ def test_cli_inspect_all_keeps_single_owner_contract(monkeypatch):
     assert [item["pid"] for item in json.loads(result.stdout)] == [1, 2]
     assert json.loads(runner.invoke(cli.app, ["inspect", "3000", "--json"]).stdout)["pid"] == 1
     assert runner.invoke(cli.app, ["inspect", "3000", "--all"]).exit_code == 0
+
+
+@pytest.mark.parametrize(
+    "error,expected", [(None, 0), (PermissionError("denied"), 4), (OSError("failed"), 1)]
+)
+def test_local_doctor_reports_scanner_failures_as_data(monkeypatch, error, expected):
+    import json
+
+    from typer.testing import CliRunner
+
+    import portwatch.cli as cli
+
+    scan = Mock(return_value=[])
+    if error:
+        scan.side_effect = error
+    monkeypatch.setattr(cli.service.scanner, "list_listening_ports", scan)
+    result = CliRunner().invoke(cli.app, ["doctor", "--json"])
+    assert result.exit_code == expected
+    report = json.loads(result.stdout)
+    assert report["python"] and report["psutil"]
+    assert report["scan"] == ("unavailable" if error else "ok")
+    if error is None:
+        assert "scan: ok" in CliRunner().invoke(cli.app, ["doctor"]).stdout

@@ -254,3 +254,9 @@ toward `--count`. Combine it with `--changes-only` to emit only later changes.
 port. With `--json`, `--all` returns an array; the existing single-owner command
 continues to return one object. Project detection reuses working-directory
 results only within a scan, so later scans still observe filesystem changes.
+
+
+`portwatch doctor --json` reports the application, Python, operating system,
+architecture, psutil version, and whether the local TCP scan succeeds. It does
+not inspect command lines or terminate processes. An unavailable scan returns
+1, or 4 for insufficient permissions, while preserving the JSON diagnostic data.

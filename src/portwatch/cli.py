@@ -1,5 +1,6 @@
 import json
 import math
+import platform
 import time
 import webbrowser
 from collections.abc import Callable
@@ -9,6 +10,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, NoReturn, cast
 
+import psutil
 import typer
 from rich.console import Console
 from rich.live import Live
@@ -665,3 +667,36 @@ def compare_snapshots(
                 console.print(Text(json.dumps(row, ensure_ascii=False)))
     if exit_code and any(changes.values()):
         raise typer.Exit(code=6)
+
+
+@app.command()
+def doctor(
+    as_json: Annotated[
+        bool, typer.Option("--json", help="Print local diagnostic results as JSON.")
+    ] = False,
+) -> None:
+    """Check the local runtime and TCP scanner without terminating processes."""
+    from portwatch import __version__
+
+    report: dict[str, object] = {
+        "portwatch": __version__,
+        "python": platform.python_version(),
+        "platform": platform.system(),
+        "architecture": platform.machine(),
+        "psutil": psutil.__version__,
+    }
+    code = 0
+    try:
+        report["listeners"] = len(service.scanner.list_listening_ports())
+        report["scan"] = "ok"
+    except OSError as error:
+        report["scan"] = "unavailable"
+        report["error"] = str(error)
+        code = 4 if isinstance(error, PermissionError) else 1
+    if as_json:
+        typer.echo(json.dumps(report))
+    else:
+        for label, value in report.items():
+            console.print(Text(f"{label}: {value}"))
+    if code:
+        raise typer.Exit(code=code)
