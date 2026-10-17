@@ -22,6 +22,7 @@ from portwatch.domain.models import PortInfo
 from portwatch.presentation.console import format_port_count, print_inspection
 from portwatch.presentation.errors import report_system_errors
 from portwatch.presentation.serializers import (
+    changes_to_csv,
     port_to_dict,
     ports_to_csv,
     ports_to_json,
@@ -476,6 +477,7 @@ def compare_snapshots(
     redact: Annotated[
         bool, typer.Option("--redact", help="Hide command lines and directories in reports.")
     ] = False,
+    as_csv: Annotated[bool, typer.Option("--csv", help="Print CSV differences.")] = False,
     after: Annotated[
         Path | None,
         typer.Argument(exists=True, dir_okay=False, help="Later snapshot; omit to scan now."),
@@ -488,6 +490,8 @@ def compare_snapshots(
     ] = False,
 ) -> None:
     """Compare saved snapshots or compare one snapshot with live listeners."""
+    if as_csv and as_json:
+        _fail("Choose either --json or --csv.", 2)
     if overwrite and output is None:
         _fail("--overwrite requires --output.", 2)
     try:
@@ -508,9 +512,15 @@ def compare_snapshots(
         changes = redact_changes(changes)
     if output is not None:
         try:
-            write_snapshot(output, json.dumps(changes, indent=2), overwrite=overwrite)
+            write_snapshot(
+                output,
+                changes_to_csv(changes) if as_csv else json.dumps(changes, indent=2),
+                overwrite=overwrite,
+            )
         except FileExistsError:
             _fail("The output file exists. Use --overwrite to replace it.", 2)
+    elif as_csv:
+        typer.echo(changes_to_csv(changes))
     elif as_json:
         typer.echo(json.dumps(changes, indent=2))
     else:

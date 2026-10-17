@@ -97,3 +97,12 @@ def test_csv_changes_preserve_before_and_after_and_escape_formulas():
     assert [item["side"] for item in rows] == ["before", "after", "listener"]
     assert all(item["command"] == "'=1" for item in rows)
     assert "change,side,port" in changes_to_csv({})
+
+
+def test_cli_diff_csv_stdout_and_file(files, tmp_path):
+    result = invoke(files, "--csv")
+    assert result.exit_code == 0 and result.stdout.startswith("change,side,port,")
+    path = tmp_path / "changes.csv"
+    assert invoke(files, "--csv", "--output", str(path)).exit_code == 0
+    assert "changed,before,3000" in path.read_text()
+    assert invoke(files, "--csv", "--json").exit_code == 2

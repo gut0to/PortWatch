@@ -224,3 +224,12 @@ as listener queries.
 dashboard `{ "ports": [...] }` responses are accepted. For a JSON Lines watch
 log, the last complete snapshot is used. Invalid final records fail explicitly.
 Duplicate JSON fields and listener identities are rejected.
+
+
+`diff` supports `--ports`, shared `--search` expressions, and repeatable
+`--ignore command` / `--ignore working_directory` / `--ignore process_name` /
+`--ignore project_name` options. Identity fields cannot be ignored. Use `--csv`
+for a report with change and before/after columns, or `--output` to save JSON
+by default. Existing reports require `--overwrite`.
+`--redact` hides commands and directories after comparison, preserving the
+presence of sensitive metadata changes without exposing their values.
