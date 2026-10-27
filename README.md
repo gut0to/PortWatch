@@ -260,3 +260,16 @@ results only within a scan, so later scans still observe filesystem changes.
 architecture, psutil version, and whether the local TCP scan succeeds. It does
 not inspect command lines or terminate processes. An unavailable scan returns
 1, or 4 for insufficient permissions, while preserving the JSON diagnostic data.
+
+
+### Analyze saved monitoring history
+
+`portwatch history watch.jsonl --json` reports scan count, duration, listener
+peaks, unique ports, and added/removed/changed listener totals. History files
+must contain timezone-aware `scanned_at` values in chronological order and be
+at most 10 MiB. Empty scans remain part of the timeline.
+
+Use `--ports`, `--exclude`, `--search`, or `--pid` to focus the analysis. `--since`
+and `--until` accept inclusive ISO timestamps with timezone offsets. `--events`
+adds timestamped transitions; `--csv` instead exports a row of totals per scan.
+`--output` saves a report, with explicit `--overwrite` required for replacement.

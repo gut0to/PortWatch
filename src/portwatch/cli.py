@@ -740,9 +740,17 @@ def history_report(
     as_csv: Annotated[
         bool, typer.Option("--csv", help="Print listener totals for every scan.")
     ] = False,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Save a history report.")
+    ] = None,
+    overwrite: Annotated[
+        bool, typer.Option("--overwrite", help="Replace an existing report.")
+    ] = False,
     as_json: Annotated[bool, typer.Option("--json", help="Print history metrics as JSON.")] = False,
 ) -> None:
     """Analyze saved watch logs without scanning this machine."""
+    if overwrite and output is None:
+        _fail("--overwrite requires --output.", 2)
     if as_csv and (as_json or events):
         _fail("--csv cannot be combined with --json or --events.", 2)
     try:
@@ -778,7 +786,16 @@ def history_report(
             report["events"] = history_events(frames)
     except ValueError as error:
         _fail(str(error), 2)
-    if as_csv:
+    if output is not None:
+        try:
+            write_snapshot(
+                output,
+                history_to_csv(frames) if as_csv else json.dumps(report, indent=2),
+                overwrite=overwrite,
+            )
+        except FileExistsError:
+            _fail("The report exists. Use --overwrite to replace it.", 2)
+    elif as_csv:
         typer.echo(history_to_csv(frames))
     elif as_json:
         typer.echo(json.dumps(report))
