@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from portwatch.domain.models import PortInfo
-from portwatch.services.snapshots import decode_snapshot, parse_snapshot_json
+from portwatch.services.snapshots import decode_snapshot, diff_snapshots, parse_snapshot_json
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,3 +52,21 @@ def load_history(path: Path) -> list[SnapshotFrame]:
     ):
         raise ValueError("History timestamps must be in chronological order.")
     return frames
+
+
+def summarize_history(frames: list[SnapshotFrame]) -> dict[str, int | float]:
+    changes = [
+        diff_snapshots(list(a.ports), list(b.ports))
+        for a, b in zip(frames, frames[1:], strict=False)
+    ]
+    return {
+        "scans": len(frames),
+        "duration_seconds": (frames[-1].scanned_at - frames[0].scanned_at).total_seconds()
+        if frames
+        else 0.0,
+        "peak_listeners": max((len(frame.ports) for frame in frames), default=0),
+        "unique_ports": len({item.port for frame in frames for item in frame.ports}),
+        "added": sum(len(change["added"]) for change in changes),
+        "removed": sum(len(change["removed"]) for change in changes),
+        "changed": sum(len(change["changed"]) for change in changes),
+    }

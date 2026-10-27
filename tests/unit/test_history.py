@@ -51,3 +51,21 @@ def test_history_loader_bounds_size_and_rejects_backwards_time(tmp_path, monkeyp
     monkeypatch.setattr(history, "MAX_HISTORY_BYTES", 1)
     with pytest.raises(ValueError, match="10 MiB"):
         history.load_history(path)
+
+
+def test_history_summary_counts_transitions_and_empty_histories():
+    from portwatch.services.history import summarize_history
+
+    result = summarize_history(
+        decode_history(record(0) + "\n" + record(2, 4000) + "\n" + record(3, None))
+    )
+    assert result == {
+        "scans": 3,
+        "duration_seconds": 3.0,
+        "peak_listeners": 1,
+        "unique_ports": 2,
+        "added": 1,
+        "removed": 2,
+        "changed": 0,
+    }
+    assert summarize_history([])["scans"] == 0
