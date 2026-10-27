@@ -31,3 +31,38 @@ def test_cli_requests_contiguous_ports_and_keeps_batch_json(monkeypatch):
     monkeypatch.setattr(cli, "service", PortService(scanner=scanner))
     result = CliRunner().invoke(cli.app, ["next", "3000", "--count", "2", "--contiguous", "--json"])
     assert result.exit_code == 0 and json.loads(result.stdout)["ports"] == [3002, 3003]
+
+
+def test_watch_duration_bounds_sleep_and_scan_attempts():
+    from portwatch.services.monitoring import watch_snapshots
+
+    now = [0.0]
+
+    def sleep(value):
+        now[0] += value
+
+    scan = Mock(return_value=[])
+    assert (
+        len(list(watch_snapshots(scan, 0.2, 0, duration=0.5, clock=lambda: now[0], sleep=sleep)))
+        == 3
+    )
+    assert now[0] == 0.5
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        {"interval": float("nan")},
+        {"interval": 0.1},
+        {"count": -1},
+        {"count": True},
+        {"duration": 0},
+        {"duration": float("inf")},
+    ],
+)
+def test_monitor_rejects_unbounded_or_invalid_timing(options):
+    from portwatch.services.monitoring import watch_snapshots
+
+    values = {"interval": 0.2, "count": 1, **options}
+    with pytest.raises(ValueError):
+        list(watch_snapshots(lambda: [], **values))
