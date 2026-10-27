@@ -21,7 +21,7 @@ from portwatch.domain.exceptions import (
     PortNotFoundError,
     ProcessTerminationError,
 )
-from portwatch.domain.models import PortInfo
+from portwatch.domain.models import PortInfo, PortRange
 from portwatch.presentation.console import format_port_count, print_inspection
 from portwatch.presentation.errors import report_system_errors
 from portwatch.presentation.serializers import (
@@ -110,6 +110,15 @@ def main(
 @app.command("list")
 @report_system_errors
 def list_ports(
+    input_path: Annotated[
+        Path | None,
+        typer.Option(
+            "--input",
+            exists=True,
+            dir_okay=False,
+            help="Read a saved snapshot instead of scanning.",
+        ),
+    ] = None,
     redact: Annotated[
         bool, typer.Option("--redact", help="Remove commands and working directories.")
     ] = False,
@@ -170,14 +179,14 @@ def list_ports(
         selection = parse_port_selection(selected_ports) if selected_ports is not None else None
         parsed_range = parse_port_range(port_range) if port_range else None
         ports = filter_ports(
-            service.list_ports(parsed_range),
+            _read_ports(input_path, parsed_range),
             search,
             pid=pid,
             process=process,
             project=project,
             exact=exact,
         )
-    except InvalidPortError as error:
+    except ValueError as error:
         _fail(str(error), 2)
     if selection is not None:
         ports = [item for item in ports if item.port in selection]
@@ -846,3 +855,10 @@ def convert_snapshot(
     )
     if content:
         typer.echo(content)
+
+
+def _read_ports(input_path: Path | None, bounds: PortRange | None = None) -> list[PortInfo]:
+    if input_path is None:
+        return service.list_ports(bounds)
+    ports = load_snapshot(input_path)
+    return [item for item in ports if bounds is None or bounds.start <= item.port <= bounds.end]
