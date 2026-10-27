@@ -230,3 +230,12 @@ test("expired action sessions recover without retrying termination", async () =>
   assert.equal(requests.filter(({url}) => url === "/api/session").length, 2);
   assert.equal(nodes.get("#notice").textContent, "Confirm the action again.");
 });
+
+
+test("listener selection keys cannot collide through metadata delimiters", async () => {
+  const { view } = await dashboard();
+  const first = {port: 3000, pid: 42, protocol: "tcp", process_name: "a:b", started_at: "c"};
+  const second = {...first, process_name: "a", started_at: "b:c"};
+  assert.notEqual(view.listenerKey(first), view.listenerKey(second));
+  assert.equal(view.listenerKey(first), view.listenerKey({...first, process_name: "updated"}));
+});
