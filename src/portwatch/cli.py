@@ -56,6 +56,12 @@ from portwatch.utils.ports import parse_port_range, parse_port_selection, valida
 from portwatch.web.server import create_server
 
 
+class SnapshotFormat(StrEnum):
+    json = "json"
+    jsonl = "jsonl"
+    csv = "csv"
+
+
 class GroupSortField(StrEnum):
     name = "name"
     listeners = "listeners"
@@ -802,3 +808,27 @@ def history_report(
     else:
         for label, value in report.items():
             console.print(Text(f"{label}: {value}"))
+
+
+@app.command("convert")
+@report_system_errors
+def convert_snapshot(
+    path: Annotated[
+        Path, typer.Argument(exists=True, dir_okay=False, help="Listener snapshot file.")
+    ],
+    to: Annotated[
+        SnapshotFormat, typer.Option("--to", help="Target snapshot format.")
+    ] = SnapshotFormat.json,
+) -> None:
+    """Convert validated snapshots between JSON, JSON Lines, and CSV."""
+    try:
+        ports = load_snapshot(path)
+    except ValueError as error:
+        _fail(str(error), 2)
+    content = (
+        ports_to_csv(ports)
+        if to == SnapshotFormat.csv
+        else (ports_to_json_lines(ports) if to == SnapshotFormat.jsonl else ports_to_json(ports))
+    )
+    if content:
+        typer.echo(content)

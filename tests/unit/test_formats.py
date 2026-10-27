@@ -77,3 +77,14 @@ def test_csv_files_can_be_compared_as_snapshots(tmp_path):
     assert load_snapshot(path)[0].port == 3000
     result = CliRunner().invoke(cli.app, ["diff", str(path), str(path), "--json"])
     assert result.exit_code == 0 and not any(json.loads(result.stdout).values())
+
+
+def test_convert_snapshot_output_formats_and_invalid_input(tmp_path):
+    path = tmp_path / "ports.csv"
+    path.write_text("port,protocol,status\n3000,tcp,LISTENING")
+    runner = CliRunner()
+    for target in ("json", "jsonl", "csv"):
+        result = runner.invoke(cli.app, ["convert", str(path), "--to", target])
+        assert result.exit_code == 0 and "3000" in result.stdout
+    path.write_text("bad")
+    assert runner.invoke(cli.app, ["convert", str(path)]).exit_code == 2
