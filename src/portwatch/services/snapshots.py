@@ -132,6 +132,8 @@ def write_snapshot(path: Path, content: str, *, overwrite: bool = False) -> None
         ) as output:
             temporary = Path(output.name)
             output.write(content + ("\n" if content else ""))
+            output.flush()
+            os.fsync(output.fileno())
         if overwrite:
             os.replace(temporary, path)
         else:

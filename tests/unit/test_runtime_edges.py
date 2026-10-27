@@ -1,3 +1,5 @@
+from unittest.mock import Mock
+
 import pytest
 from tests.unit.test_web import request
 from tests.unit.test_web import running_dashboard as running_dashboard
@@ -36,3 +38,19 @@ def test_project_markers_must_be_files_except_git_directories(tmp_path):
     assert ProjectDetector().detect(str(tmp_path)) is None
     (tmp_path / ".git").mkdir()
     assert ProjectDetector().detect(str(tmp_path)) == tmp_path.name
+
+
+def test_snapshot_data_is_synced_before_publication_and_failures_do_not_replace_old_data(
+    tmp_path, monkeypatch
+):
+    import portwatch.services.snapshots as snapshots
+
+    path = tmp_path / "ports.json"
+    path.write_text("old")
+    sync = Mock(side_effect=OSError("sync failed"))
+    monkeypatch.setattr(snapshots.os, "fsync", sync)
+    with pytest.raises(OSError, match="sync failed"):
+        snapshots.write_snapshot(path, "[]", overwrite=True)
+    assert path.read_text() == "old"
+    assert list(tmp_path.iterdir()) == [path]
+    sync.assert_called_once()
