@@ -273,3 +273,15 @@ Use `--ports`, `--exclude`, `--search`, or `--pid` to focus the analysis. `--sin
 and `--until` accept inclusive ISO timestamps with timezone offsets. `--events`
 adds timestamped transitions; `--csv` instead exports a row of totals per scan.
 `--output` saves a report, with explicit `--overwrite` required for replacement.
+
+
+### Work with saved snapshots
+
+`list`, `summary`, and `inspect` accept `--input snapshot.json` to query a file
+without scanning the machine. JSON arrays, dashboard envelopes, JSON Lines,
+watch logs, and CSV listener exports are accepted. CSV safety apostrophes remain
+literal text on import; use JSON for exact metadata preservation.
+
+`convert snapshot.csv --to json|jsonl|csv` writes a converted snapshot to stdout.
+Use `--output` to save it, `--overwrite` for explicit replacement, and `--ports`,
+`--search`, or `--redact` to prepare focused exports.

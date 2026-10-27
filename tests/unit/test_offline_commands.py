@@ -58,3 +58,15 @@ def test_inspection_uses_snapshot_owners_and_distinct_missing_code(saved):
     )
     assert runner.invoke(cli.app, ["inspect", "5000", "--input", str(saved)]).exit_code == 3
     assert runner.invoke(cli.app, ["inspect", "0", "--input", str(saved)]).exit_code == 2
+
+
+def test_conversion_output_protects_existing_files(saved, tmp_path):
+    path = tmp_path / "converted.jsonl"
+    runner = CliRunner()
+    args = ["convert", str(saved), "--to", "jsonl", "--output", str(path)]
+    result = runner.invoke(cli.app, args)
+    assert result.exit_code == 0 and result.stdout == ""
+    assert len(path.read_text().splitlines()) == 2
+    assert runner.invoke(cli.app, args).exit_code == 2
+    assert runner.invoke(cli.app, [*args, "--overwrite"]).exit_code == 0
+    assert runner.invoke(cli.app, ["convert", str(saved), "--overwrite"]).exit_code == 2

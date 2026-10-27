@@ -850,11 +850,19 @@ def convert_snapshot(
     redact: Annotated[
         bool, typer.Option("--redact", help="Remove commands and directories.")
     ] = False,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Save the converted snapshot.")
+    ] = None,
+    overwrite: Annotated[
+        bool, typer.Option("--overwrite", help="Replace an existing output file.")
+    ] = False,
     to: Annotated[
         SnapshotFormat, typer.Option("--to", help="Target snapshot format.")
     ] = SnapshotFormat.json,
 ) -> None:
     """Convert validated snapshots between JSON, JSON Lines, and CSV."""
+    if overwrite and output is None:
+        _fail("--overwrite requires --output.", 2)
     try:
         selection = parse_port_selection(selected_ports) if selected_ports is not None else None
         ports = filter_ports(load_snapshot(path), search)
@@ -869,7 +877,12 @@ def convert_snapshot(
         if to == SnapshotFormat.csv
         else (ports_to_json_lines(ports) if to == SnapshotFormat.jsonl else ports_to_json(ports))
     )
-    if content:
+    if output is not None:
+        try:
+            write_snapshot(output, content, overwrite=overwrite)
+        except FileExistsError:
+            _fail("The output file exists. Use --overwrite to replace it.", 2)
+    elif content:
         typer.echo(content)
 
 
