@@ -1,6 +1,7 @@
 "use strict";
 
 import { fetchPorts, getJson, parseRange, terminatePort } from "./dashboard-api.js";
+import { searchListeners } from "./dashboard-search.js";
 import { renderDashboard } from "./dashboard-render.js";
 import {
   elements,
@@ -77,21 +78,7 @@ async function scan() {
 }
 
 function filterPorts() {
-  const query = elements.search.value.trim().toLocaleLowerCase();
-  if (!query) return state.ports;
-  return state.ports.filter((port) => {
-    const values = [
-      port.port,
-      port.protocol,
-      port.status,
-      port.process_name,
-      port.pid,
-      port.project_name,
-      port.command,
-      port.working_directory,
-    ];
-    return values.some((value) => value !== null && value !== undefined && String(value).toLocaleLowerCase().includes(query));
-  });
+  return searchListeners(state.ports, elements.search.value);
 }
 
 function render() {

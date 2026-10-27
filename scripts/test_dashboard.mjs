@@ -266,3 +266,17 @@ test("listener refresh preserves keyboard focus on the matching owner", async ()
   assert.notEqual(document.activeElement, first);
   assert.equal(document.activeElement.dataset.listener, first.dataset.listener);
 });
+
+
+test("dashboard search combines terms and excludes negative metadata", async () => {
+  const { nodes, setPorts } = await dashboard();
+  setPorts([
+    {port:3000,pid:42,protocol:"tcp",status:"LISTENING",process_name:"python",project_name:"API"},
+    {port:4000,pid:43,protocol:"tcp",status:"LISTENING",process_name:"python-worker",project_name:"API"},
+  ]);
+  await nodes.get("#rescan").listeners.click();
+  nodes.get("#search").value = "PYTHON api -worker";
+  nodes.get("#search").listeners.input();
+  assert.equal(nodes.get("#visible-count").textContent, "1 shown");
+  assert.equal(nodes.get("#listener-list").querySelectorAll().length, 1);
+});
