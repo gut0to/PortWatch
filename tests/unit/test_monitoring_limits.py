@@ -66,3 +66,15 @@ def test_monitor_rejects_unbounded_or_invalid_timing(options):
     values = {"interval": 0.2, "count": 1, **options}
     with pytest.raises(ValueError):
         list(watch_snapshots(lambda: [], **values))
+
+
+def test_cli_watch_duration_is_forwarded_and_validated(monkeypatch):
+    from typer.testing import CliRunner
+
+    import portwatch.cli as cli
+
+    watch = Mock(return_value=iter([[]]))
+    monkeypatch.setattr(cli, "watch_snapshots", watch)
+    result = CliRunner().invoke(cli.app, ["watch", "--duration", "1", "--json"])
+    assert result.exit_code == 0 and watch.call_args.kwargs["duration"] == 1.0
+    assert CliRunner().invoke(cli.app, ["watch", "--duration", "nan"]).exit_code == 2

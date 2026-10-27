@@ -365,6 +365,10 @@ def free(
 @app.command()
 @report_system_errors
 def watch(
+    duration: Annotated[
+        float | None,
+        typer.Option("--duration", min=0.2, help="Maximum monitoring duration in seconds."),
+    ] = None,
     skip_initial: Annotated[
         bool, typer.Option("--skip-initial", help="Establish a baseline without emitting it.")
     ] = False,
@@ -403,6 +407,8 @@ def watch(
         str | None, typer.Option("--range", help="Filter ports, e.g. 3000-9000.")
     ] = None,
 ) -> None:
+    if duration is not None and not math.isfinite(duration):
+        _fail("Watch duration must be finite.", 2)
     if not math.isfinite(interval):
         _fail("Refresh interval must be finite.", 2)
     try:
@@ -431,6 +437,7 @@ def watch(
         scan_selected,
         interval,
         count,
+        duration=duration,
         changes_only=changes_only,
         skip_initial=skip_initial,
         sleep=time.sleep,
