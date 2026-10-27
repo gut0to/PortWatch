@@ -70,3 +70,16 @@ def test_conversion_output_protects_existing_files(saved, tmp_path):
     assert runner.invoke(cli.app, args).exit_code == 2
     assert runner.invoke(cli.app, [*args, "--overwrite"]).exit_code == 0
     assert runner.invoke(cli.app, ["convert", str(saved), "--overwrite"]).exit_code == 2
+
+
+def test_port_state_check_uses_exit_codes_and_never_resolves_metadata(monkeypatch):
+    from portwatch.domain.models import PortInfo
+
+    scanner = Mock(return_value=[PortInfo(3000, "tcp", "LISTENING")])
+    monkeypatch.setattr(cli.service.scanner, "list_listening_ports", scanner)
+    runner = CliRunner()
+    result = runner.invoke(cli.app, ["check", "3000", "--json"])
+    assert result.exit_code == 7 and json.loads(result.stdout)["matches"] is False
+    assert runner.invoke(cli.app, ["check", "3000", "--expect", "busy"]).exit_code == 0
+    assert runner.invoke(cli.app, ["check", "4000"]).exit_code == 0
+    assert runner.invoke(cli.app, ["check", "0"]).exit_code == 2

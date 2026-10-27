@@ -56,6 +56,11 @@ from portwatch.utils.ports import parse_port_range, parse_port_selection, valida
 from portwatch.web.server import create_server
 
 
+class ExpectedPortState(StrEnum):
+    free = "free"
+    busy = "busy"
+
+
 class SnapshotFormat(StrEnum):
     json = "json"
     jsonl = "jsonl"
@@ -891,3 +896,33 @@ def _read_ports(input_path: Path | None, bounds: PortRange | None = None) -> lis
         return service.list_ports(bounds)
     ports = load_snapshot(input_path)
     return [item for item in ports if bounds is None or bounds.start <= item.port <= bounds.end]
+
+
+@app.command("check")
+@report_system_errors
+def check_port(
+    port: Annotated[int, typer.Argument(help="Port whose listening state should be checked.")],
+    expect: Annotated[
+        ExpectedPortState, typer.Option("--expect", help="Expected listening state.")
+    ] = ExpectedPortState.free,
+    as_json: Annotated[
+        bool, typer.Option("--json", help="Print the check result as JSON.")
+    ] = False,
+) -> None:
+    """Check a port's scan state; exit 7 when it differs from the expectation."""
+    try:
+        validate_port(port)
+    except InvalidPortError as error:
+        _fail(str(error), 2)
+    listening = any(item.port == port for item in service.scanner.list_listening_ports())
+    matches = listening == (expect == ExpectedPortState.busy)
+    if as_json:
+        typer.echo(
+            json.dumps(
+                {"port": port, "listening": listening, "expected": expect.value, "matches": matches}
+            )
+        )
+    else:
+        console.print(Text(f"Port {port}: {'busy' if listening else 'free'}"))
+    if not matches:
+        raise typer.Exit(code=7)
