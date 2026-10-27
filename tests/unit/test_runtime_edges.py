@@ -27,3 +27,12 @@ def test_malformed_request_targets_return_json_bad_request(running_dashboard, me
         server, method, path, headers={"Host": f"127.0.0.1:{server.server_port}"}
     )
     assert status == 400 and "request path is invalid" in result["error"]
+
+
+def test_project_markers_must_be_files_except_git_directories(tmp_path):
+    from portwatch.services.project_detector import ProjectDetector
+
+    (tmp_path / "package.json").mkdir()
+    assert ProjectDetector().detect(str(tmp_path)) is None
+    (tmp_path / ".git").mkdir()
+    assert ProjectDetector().detect(str(tmp_path)) == tmp_path.name
