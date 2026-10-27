@@ -78,3 +78,20 @@ def test_cli_watch_duration_is_forwarded_and_validated(monkeypatch):
     result = CliRunner().invoke(cli.app, ["watch", "--duration", "1", "--json"])
     assert result.exit_code == 0 and watch.call_args.kwargs["duration"] == 1.0
     assert CliRunner().invoke(cli.app, ["watch", "--duration", "nan"]).exit_code == 2
+
+
+def test_watch_event_stream_reports_transitions_without_exposing_redacted_data(monkeypatch):
+    import json
+
+    from typer.testing import CliRunner
+
+    import portwatch.cli as cli
+
+    item = PortInfo(3000, "tcp", "LISTENING", command="secret")
+    monkeypatch.setattr(cli, "watch_snapshots", lambda *args, **kwargs: iter([[item], []]))
+    result = CliRunner().invoke(cli.app, ["watch", "--events", "--redact", "--count", "2"])
+    assert result.exit_code == 0
+    rows = [json.loads(line) for line in result.stdout.splitlines()]
+    assert rows[0]["changes"]["added"][0]["command"] is None
+    assert rows[1]["changes"]["removed"][0]["port"] == 3000
+    assert "secret" not in result.stdout
