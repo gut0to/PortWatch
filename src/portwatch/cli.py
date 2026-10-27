@@ -32,7 +32,7 @@ from portwatch.presentation.serializers import (
     ports_to_json_lines,
 )
 from portwatch.presentation.tables import ports_table, watch_view
-from portwatch.services.history import load_history, summarize_history
+from portwatch.services.history import SnapshotFrame, load_history, summarize_history
 from portwatch.services.monitoring import watch_snapshots
 from portwatch.services.port_filters import filter_ports
 from portwatch.services.port_service import PortService
@@ -709,11 +709,30 @@ def history_report(
     path: Annotated[
         Path, typer.Argument(exists=True, dir_okay=False, help="JSON Lines watch log.")
     ],
+    selected_ports: Annotated[
+        str | None, typer.Option("--ports", help="Analyze selected ports.")
+    ] = None,
+    exclude: Annotated[
+        str | None, typer.Option("--exclude", help="Exclude selected ports.")
+    ] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Print history metrics as JSON.")] = False,
 ) -> None:
     """Analyze saved watch logs without scanning this machine."""
     try:
         frames = load_history(path)
+        selection = parse_port_selection(selected_ports) if selected_ports is not None else None
+        excluded = parse_port_selection(exclude) if exclude is not None else frozenset()
+        frames = [
+            SnapshotFrame(
+                frame.scanned_at,
+                tuple(
+                    item
+                    for item in frame.ports
+                    if (selection is None or item.port in selection) and item.port not in excluded
+                ),
+            )
+            for frame in frames
+        ]
         report = summarize_history(frames)
     except ValueError as error:
         _fail(str(error), 2)
