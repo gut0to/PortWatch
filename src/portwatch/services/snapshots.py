@@ -70,6 +70,8 @@ def load_snapshot(path: Path) -> list[PortInfo]:
     if len(raw) > MAX_SNAPSHOT_BYTES:
         raise ValueError("Snapshot files must be at most 10 MiB.")
     text = raw.decode("utf-8-sig")
+    if path.suffix.casefold() == ".csv":
+        return decode_csv_snapshot(text)
     if path.suffix.casefold() in {".jsonl", ".ndjson"}:
         return decode_json_lines(text)
     return decode_snapshot(parse_snapshot_json(text))

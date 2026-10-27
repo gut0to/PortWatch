@@ -67,3 +67,13 @@ def test_csv_snapshot_rejects_ambiguous_or_malformed_input(text):
 
     with pytest.raises(ValueError):
         decode_csv_snapshot(text)
+
+
+def test_csv_files_can_be_compared_as_snapshots(tmp_path):
+    from portwatch.services.snapshots import load_snapshot
+
+    path = tmp_path / "ports.CSV"
+    path.write_text("port,protocol,status\n3000,tcp,LISTENING", encoding="utf-8-sig")
+    assert load_snapshot(path)[0].port == 3000
+    result = CliRunner().invoke(cli.app, ["diff", str(path), str(path), "--json"])
+    assert result.exit_code == 0 and not any(json.loads(result.stdout).values())
