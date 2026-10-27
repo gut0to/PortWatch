@@ -88,3 +88,12 @@ def test_convert_snapshot_output_formats_and_invalid_input(tmp_path):
         assert result.exit_code == 0 and "3000" in result.stdout
     path.write_text("bad")
     assert runner.invoke(cli.app, ["convert", str(path)]).exit_code == 2
+
+
+def test_conversion_filters_and_redacts_before_export(tmp_path):
+    path = tmp_path / "ports.json"
+    path.write_text('[{"port":3000,"protocol":"tcp","status":"LISTENING","command":"secret"}]')
+    args = ["convert", str(path), "--ports", "3000", "--search", "secret", "--redact"]
+    result = CliRunner().invoke(cli.app, args)
+    assert result.exit_code == 0 and json.loads(result.stdout)[0]["command"] is None
+    assert CliRunner().invoke(cli.app, ["convert", str(path), "--ports", "bad"]).exit_code == 2

@@ -816,13 +816,27 @@ def convert_snapshot(
     path: Annotated[
         Path, typer.Argument(exists=True, dir_okay=False, help="Listener snapshot file.")
     ],
+    search: Annotated[
+        str, typer.Option("--search", help="Filter listener metadata before conversion.")
+    ] = "",
+    selected_ports: Annotated[
+        str | None, typer.Option("--ports", help="Select ports and ranges.")
+    ] = None,
+    redact: Annotated[
+        bool, typer.Option("--redact", help="Remove commands and directories.")
+    ] = False,
     to: Annotated[
         SnapshotFormat, typer.Option("--to", help="Target snapshot format.")
     ] = SnapshotFormat.json,
 ) -> None:
     """Convert validated snapshots between JSON, JSON Lines, and CSV."""
     try:
-        ports = load_snapshot(path)
+        selection = parse_port_selection(selected_ports) if selected_ports is not None else None
+        ports = filter_ports(load_snapshot(path), search)
+        if selection is not None:
+            ports = [item for item in ports if item.port in selection]
+        if redact:
+            ports = redact_snapshot(ports)
     except ValueError as error:
         _fail(str(error), 2)
     content = (
