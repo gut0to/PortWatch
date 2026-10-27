@@ -715,6 +715,12 @@ def history_report(
     exclude: Annotated[
         str | None, typer.Option("--exclude", help="Exclude selected ports.")
     ] = None,
+    search: Annotated[
+        str, typer.Option("--search", help="Filter historical listener metadata.")
+    ] = "",
+    pid: Annotated[
+        int | None, typer.Option("--pid", min=1, help="Filter historical process IDs.")
+    ] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Print history metrics as JSON.")] = False,
 ) -> None:
     """Analyze saved watch logs without scanning this machine."""
@@ -731,6 +737,10 @@ def history_report(
                     if (selection is None or item.port in selection) and item.port not in excluded
                 ),
             )
+            for frame in frames
+        ]
+        frames = [
+            SnapshotFrame(frame.scanned_at, tuple(filter_ports(list(frame.ports), search, pid=pid)))
             for frame in frames
         ]
         report = summarize_history(frames)

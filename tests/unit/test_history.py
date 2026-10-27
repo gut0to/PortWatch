@@ -103,3 +103,16 @@ def test_history_port_filters_preserve_empty_frames(tmp_path):
     assert result.exit_code == 0
     assert json.loads(result.stdout)["scans"] == 2
     assert json.loads(result.stdout)["unique_ports"] == 1
+
+
+def test_history_metadata_and_pid_filters(tmp_path):
+    from typer.testing import CliRunner
+
+    import portwatch.cli as cli
+
+    path = tmp_path / "watch.jsonl"
+    path.write_text(record(0))
+    result = CliRunner().invoke(
+        cli.app, ["history", str(path), "--search", "3000 -4000", "--pid", "42", "--json"]
+    )
+    assert json.loads(result.stdout)["peak_listeners"] == 1
