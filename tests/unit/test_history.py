@@ -69,3 +69,22 @@ def test_history_summary_counts_transitions_and_empty_histories():
         "changed": 0,
     }
     assert summarize_history([])["scans"] == 0
+
+
+def test_history_command_never_scans_live_machine(tmp_path, monkeypatch):
+    from unittest.mock import Mock
+
+    from typer.testing import CliRunner
+
+    import portwatch.cli as cli
+
+    path = tmp_path / "watch.jsonl"
+    path.write_text(record(0) + "\n" + record(2, None))
+    scan = Mock(side_effect=AssertionError("no live scan"))
+    monkeypatch.setattr(cli.service, "list_ports", scan)
+    result = CliRunner().invoke(cli.app, ["history", str(path), "--json"])
+    assert result.exit_code == 0 and json.loads(result.stdout)["removed"] == 1
+    assert "scans: 2" in CliRunner().invoke(cli.app, ["history", str(path)]).stdout
+    path.write_text("bad")
+    assert CliRunner().invoke(cli.app, ["history", str(path)]).exit_code == 2
+    scan.assert_not_called()

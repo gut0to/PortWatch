@@ -32,6 +32,7 @@ from portwatch.presentation.serializers import (
     ports_to_json_lines,
 )
 from portwatch.presentation.tables import ports_table, watch_view
+from portwatch.services.history import load_history, summarize_history
 from portwatch.services.monitoring import watch_snapshots
 from portwatch.services.port_filters import filter_ports
 from portwatch.services.port_service import PortService
@@ -700,3 +701,24 @@ def doctor(
             console.print(Text(f"{label}: {value}"))
     if code:
         raise typer.Exit(code=code)
+
+
+@app.command("history")
+@report_system_errors
+def history_report(
+    path: Annotated[
+        Path, typer.Argument(exists=True, dir_okay=False, help="JSON Lines watch log.")
+    ],
+    as_json: Annotated[bool, typer.Option("--json", help="Print history metrics as JSON.")] = False,
+) -> None:
+    """Analyze saved watch logs without scanning this machine."""
+    try:
+        frames = load_history(path)
+        report = summarize_history(frames)
+    except ValueError as error:
+        _fail(str(error), 2)
+    if as_json:
+        typer.echo(json.dumps(report))
+    else:
+        for label, value in report.items():
+            console.print(Text(f"{label}: {value}"))
