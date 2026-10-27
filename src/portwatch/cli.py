@@ -526,6 +526,10 @@ def _fail(message: str, code: int) -> NoReturn:
 @app.command()
 @report_system_errors
 def summary(
+    input_path: Annotated[
+        Path | None,
+        typer.Option("--input", exists=True, dir_okay=False, help="Summarize a saved snapshot."),
+    ] = None,
     sort: Annotated[
         GroupSortField, typer.Option("--sort", help="Order grouped summary rows.")
     ] = GroupSortField.name,
@@ -567,14 +571,14 @@ def summary(
         excluded = parse_port_selection(exclude) if exclude is not None else frozenset()
         bounds = parse_port_range(port_range) if port_range else None
         ports = filter_ports(
-            service.list_ports(bounds),
+            _read_ports(input_path, bounds),
             search,
             pid=pid,
             process=process,
             project=project,
             exact=exact,
         )
-    except InvalidPortError as error:
+    except ValueError as error:
         _fail(str(error), 2)
     ports = [
         item

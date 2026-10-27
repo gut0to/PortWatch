@@ -31,3 +31,12 @@ def test_list_uses_saved_snapshot_with_range_and_output_formats(saved):
     )
     saved.write_text("bad")
     assert CliRunner().invoke(cli.app, ["list", "--input", str(saved)]).exit_code == 2
+
+
+def test_summary_operates_on_saved_snapshots(saved):
+    result = CliRunner().invoke(
+        cli.app, ["summary", "--input", str(saved), "--group", "process", "--json"]
+    )
+    assert result.exit_code == 0 and json.loads(result.stdout)["listeners"] == 2
+    saved.write_text("bad")
+    assert CliRunner().invoke(cli.app, ["summary", "--input", str(saved)]).exit_code == 2
