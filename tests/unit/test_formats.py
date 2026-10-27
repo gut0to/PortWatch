@@ -2,6 +2,7 @@ import csv
 import io
 import json
 
+import pytest
 from typer.testing import CliRunner
 
 import portwatch.cli as cli
@@ -36,3 +37,33 @@ def test_history_reports_are_saved_without_accidental_replacement(tmp_path):
     assert runner.invoke(cli.app, args).exit_code == 2
     assert runner.invoke(cli.app, [*args, "--overwrite", "--csv"]).exit_code == 0
     assert runner.invoke(cli.app, ["history", str(path), "--overwrite"]).exit_code == 2
+
+
+def test_csv_snapshot_round_trips_quoted_metadata_and_empty_cells():
+    from portwatch.domain.models import PortInfo
+    from portwatch.presentation.serializers import ports_to_csv
+    from portwatch.services.snapshots import decode_csv_snapshot
+
+    item = PortInfo(3000, "tcp", "LISTENING", command='python "a,b.py"')
+    assert decode_csv_snapshot(ports_to_csv([item])) == [item]
+    assert decode_csv_snapshot(ports_to_csv([])) == []
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "",
+        "port,port,protocol,status\n",
+        "port,protocol,status,bogus\n",
+        "port,protocol,status\n1,tcp\n",
+        "port,protocol,status\n1,tcp,LISTENING,extra\n",
+        "port,protocol,status\nTrue,tcp,LISTENING\n",
+        'port,protocol,status\n"unterminated',
+        "port,protocol,status,pid\n1,tcp,LISTENING,-1\n",
+    ],
+)
+def test_csv_snapshot_rejects_ambiguous_or_malformed_input(text):
+    from portwatch.services.snapshots import decode_csv_snapshot
+
+    with pytest.raises(ValueError):
+        decode_csv_snapshot(text)

@@ -1,5 +1,7 @@
 """Validate portable listener snapshots and compare their process identities."""
 
+import csv
+import io
 import json
 import math
 import os
@@ -216,3 +218,43 @@ def parse_snapshot_json(text: str) -> object:
         return data
     except RecursionError as error:
         raise ValueError("Snapshot JSON is nested too deeply.") from error
+
+
+def decode_csv_snapshot(text: str) -> list[PortInfo]:
+    reader = csv.DictReader(io.StringIO(text), strict=True)
+    fields = reader.fieldnames
+    if (
+        fields is None
+        or len(fields) != len(set(fields))
+        or not {"port", "protocol", "status"} <= set(fields)
+    ):
+        raise ValueError("CSV snapshots require unique port, protocol, and status columns.")
+    if set(fields) - PortInfo.__dataclass_fields__.keys():
+        raise ValueError("CSV snapshot contains unknown columns.")
+    rows: list[dict[str, object]] = []
+    try:
+        for row in reader:
+            if None in row or any(value is None for value in row.values()):
+                raise ValueError("CSV snapshot rows must match their header.")
+            converted: dict[str, object] = dict(row)
+            for name in ("port", "pid"):
+                value = row.get(name, "")
+                if name == "pid" and not value:
+                    converted[name] = None
+                    continue
+                if not value.isascii() or not value.isdecimal() or len(value) > 10:
+                    raise ValueError(f"CSV {name} must be a decimal integer.")
+                converted[name] = int(value)
+            for name in (
+                "process_name",
+                "project_name",
+                "command",
+                "working_directory",
+                "started_at",
+            ):
+                if name in converted and converted[name] == "":
+                    converted[name] = None
+            rows.append(converted)
+    except csv.Error as error:
+        raise ValueError(f"Invalid CSV snapshot: {error}") from error
+    return decode_snapshot(rows)
