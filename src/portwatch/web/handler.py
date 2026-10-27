@@ -134,10 +134,10 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
 
     def _terminate_port(self, raw_port: str) -> None:
         try:
+            payload = self._read_json_body()
             port = int(raw_port)
             if not 1 <= port <= MAX_PORT:
                 raise ValueError("Port must be between 1 and 65535.")
-            payload = self._read_json_body()
             started_at = payload.get("started_at")
             if started_at is not None and not isinstance(started_at, str):
                 raise ValueError("Process start time must be a string or null.")

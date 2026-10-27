@@ -64,3 +64,14 @@ def test_version_is_available_even_when_a_subcommand_is_missing_arguments():
     for command in ("inspect", "diff", "history", "check"):
         result = CliRunner().invoke(cli.app, ["--version", command])
         assert result.exit_code == 0 and result.stdout.startswith("PortWatch ")
+
+
+def test_invalid_action_port_still_consumes_the_bounded_json_body():
+    from portwatch.web.handler import DashboardRequestHandler
+
+    handler = object.__new__(DashboardRequestHandler)
+    handler._read_json_body = Mock(return_value={"pid": 42})
+    handler._send_error = Mock()
+    handler._terminate_port("0")
+    handler._read_json_body.assert_called_once_with()
+    assert handler._send_error.call_args.args[0] == 400
