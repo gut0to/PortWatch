@@ -12,25 +12,42 @@ async function dashboard(options = {}) {
       this.listeners = {};
       this.value = "";
       this.textContent = "";
+      this.children = [];
     }
     setAttribute() {}
     removeAttribute() {}
-    append() {}
-    replaceChildren() {}
+    append(...nodes) {
+      for (const node of nodes) {
+        if (node.tagName === "#FRAGMENT") this.append(...node.children);
+        else { node.parentElement = this; this.children.push(node); }
+      }
+    }
+    replaceChildren(...nodes) { this.children = []; this.append(...nodes); }
+    closest(selector) {
+      const ids = selector.split(",").map((part) => part.trim().slice(1));
+      for (let node = this; node; node = node.parentElement) if (ids.includes(node.id)) return node;
+      return null;
+    }
+    querySelectorAll() {
+      return this.children.flatMap((node) => [
+        ...(node.tagName === "BUTTON" && node.dataset.listener ? [node] : []),
+        ...node.querySelectorAll(),
+      ]);
+    }
     querySelector() { return new Node(); }
     addEventListener(name, callback) { this.listeners[name] = callback; }
     showModal() { this.open = true; }
     close() { this.open = false; }
-    focus() {}
+    focus() { document.activeElement = this; }
   }
   const document = {
     querySelector(selector) {
-      if (!nodes.has(selector)) nodes.set(selector, new Node());
+      if (!nodes.has(selector)) { const node = new Node(); node.id = selector.slice(1); nodes.set(selector, node); }
       return nodes.get(selector);
     },
-    createElement: () => new Node(),
+    createElement: (tag) => Object.assign(new Node(), {tagName: tag.toUpperCase()}),
     createElementNS: () => new Node(),
-    createDocumentFragment: () => new Node(),
+    createDocumentFragment: () => Object.assign(new Node(), {tagName: "#FRAGMENT"}),
     addEventListener() {},
   };
   document.querySelector("#range-start").value = "1";
@@ -67,7 +84,7 @@ async function dashboard(options = {}) {
   await root.link((specifier) => load(specifier.replace("./", "")));
   await root.evaluate();
   await new Promise(setImmediate);
-  return { nodes, requests, api: modules.get("dashboard-api.js").namespace, view: modules.get("dashboard-view.js").namespace, setPorts(value) { ports = value; } };
+  return { document, nodes, requests, api: modules.get("dashboard-api.js").namespace, view: modules.get("dashboard-view.js").namespace, setPorts(value) { ports = value; } };
 }
 
 test("confirmation opens for the selected listener and submits its PID", async () => {
@@ -238,4 +255,14 @@ test("listener selection keys cannot collide through metadata delimiters", async
   const second = {...first, process_name: "a", started_at: "b:c"};
   assert.notEqual(view.listenerKey(first), view.listenerKey(second));
   assert.equal(view.listenerKey(first), view.listenerKey({...first, process_name: "updated"}));
+});
+
+
+test("listener refresh preserves keyboard focus on the matching owner", async () => {
+  const { document, nodes } = await dashboard();
+  const first = nodes.get("#listener-list").querySelectorAll()[0];
+  first.focus();
+  await nodes.get("#rescan").listeners.click();
+  assert.notEqual(document.activeElement, first);
+  assert.equal(document.activeElement.dataset.listener, first.dataset.listener);
 });
