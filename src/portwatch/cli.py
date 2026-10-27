@@ -279,6 +279,9 @@ def inspect(
 @report_system_errors
 def next(
     port: Annotated[int, typer.Argument(help="Starting port.")],
+    contiguous: Annotated[
+        bool, typer.Option("--contiguous", help="Require consecutive free port numbers.")
+    ] = False,
     exclude: Annotated[
         str | None, typer.Option("--exclude", help="Skip reserved ports and ranges.")
     ] = None,
@@ -295,9 +298,13 @@ def next(
         excluded = parse_port_selection(exclude) if exclude is not None else frozenset()
     except InvalidPortError as error:
         _fail(str(error), 2)
-    if count > 1 or excluded:
+    if count > 1 or excluded or contiguous:
         try:
-            found = service.available_ports(port, count, end, excluded=excluded)
+            found = (
+                service.available_port_block(port, count, end, excluded=excluded)
+                if contiguous
+                else service.available_ports(port, count, end, excluded=excluded)
+            )
         except InvalidPortError as error:
             _fail(str(error), 2)
         except PortNotFoundError as error:

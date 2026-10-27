@@ -285,3 +285,10 @@ literal text on import; use JSON for exact metadata preservation.
 `convert snapshot.csv --to json|jsonl|csv` writes a converted snapshot to stdout.
 Use `--output` to save it, `--overwrite` for explicit replacement, and `--ports`,
 `--search`, or `--redact` to prepare focused exports.
+
+
+`check 3000,4000-4002 --expect free|busy --json` checks listener presence in
+one scan. It returns 7 when any selected port differs from the expectation.
+This describes a scan snapshot; it does not prove that binding a socket will
+succeed. `next --count 3 --contiguous --exclude 3005` finds a consecutive block
+without crossing busy or reserved port numbers.
