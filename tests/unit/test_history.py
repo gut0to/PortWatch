@@ -37,3 +37,17 @@ def test_history_decoder_preserves_every_frame():
 def test_history_reports_the_invalid_record_number(value):
     with pytest.raises(ValueError, match="History line 2"):
         decode_history(record(0) + "\n" + value)
+
+
+def test_history_loader_bounds_size_and_rejects_backwards_time(tmp_path, monkeypatch):
+    import portwatch.services.history as history
+
+    path = tmp_path / "watch.jsonl"
+    path.write_text(record(1) + "\n" + record(0))
+    with pytest.raises(ValueError, match="chronological"):
+        history.load_history(path)
+    path.write_text(record(0) + "\n" + record(0), encoding="utf-8-sig")
+    assert len(history.load_history(path)) == 2
+    monkeypatch.setattr(history, "MAX_HISTORY_BYTES", 1)
+    with pytest.raises(ValueError, match="10 MiB"):
+        history.load_history(path)
