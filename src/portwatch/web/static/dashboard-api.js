@@ -4,25 +4,25 @@ export async function getJson(url, options = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-  const response = await fetch(url, {
-    cache: "no-store",
-    signal: controller.signal,
-    ...options,
-    headers: { Accept: "application/json", ...options.headers },
-  });
-  let data;
-  try {
-    data = await response.json();
-  } catch {
-    throw new Error("The local dashboard returned an unreadable response.");
-  }
-  if (!response.ok) {
-    const message = typeof data?.error === "string" ? data.error : `Request failed (${response.status}).`;
-    const error = new Error(message);
-    error.status = response.status;
-    throw error;
-  }
-  return data;
+    const response = await fetch(url, {
+      cache: "no-store",
+      signal: controller.signal,
+      ...options,
+      headers: { Accept: "application/json", ...options.headers },
+    });
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error("The local dashboard returned an unreadable response.");
+    }
+    if (!response.ok) {
+      const message = typeof data?.error === "string" ? data.error : `Request failed (${response.status}).`;
+      const error = new Error(message);
+      error.status = response.status;
+      throw error;
+    }
+    return data;
   } catch (error) {
     if (controller.signal.aborted) {
       throw new Error("The local dashboard did not respond within 15 seconds. Rescan to try again.");

@@ -90,6 +90,14 @@ def test_convert_snapshot_output_formats_and_invalid_input(tmp_path):
     assert runner.invoke(cli.app, ["convert", str(path)]).exit_code == 2
 
 
+def test_converting_an_empty_snapshot_to_json_lines_emits_nothing(tmp_path):
+    path = tmp_path / "empty.json"
+    path.write_text("[]")
+    result = CliRunner().invoke(cli.app, ["convert", str(path), "--to", "jsonl"])
+    assert result.exit_code == 0
+    assert result.stdout == ""
+
+
 def test_conversion_filters_and_redacts_before_export(tmp_path):
     path = tmp_path / "ports.json"
     path.write_text('[{"port":3000,"protocol":"tcp","status":"LISTENING","command":"secret"}]')

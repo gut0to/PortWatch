@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### History analysis and runtime reliability
+
+- Analyze timestamped monitoring histories with time windows, filters, churn, peaks, events, and CSV reports.
+- Convert JSON, JSON Lines, and CSV snapshots and query saved listeners without a live scan.
+- Check expected port availability, find contiguous free ports, and bound monitoring by duration.
+- Emit watch changes and periodic heartbeats for automation.
+- Recover dashboard sessions, bound network waits, retain keyboard focus, and support search exclusions.
+- Expose server readiness and reject malformed HTTP targets and unknown scan parameters.
+- Validate snapshot depth and finite numbers, require real project markers, and sync exports before publication.
+- Refresh the Windows executable with verified bundled assets and live runtime checks.
+
 ### Snapshot interoperability and inspection
 
 - Import UTF-8 BOM files, JSON Lines, dashboard responses, and the latest watch-log snapshot.

@@ -49,6 +49,22 @@ def test_watch_duration_bounds_sleep_and_scan_attempts():
     assert now[0] == 0.5
 
 
+def test_watch_duration_does_not_sleep_after_an_inflight_scan_exhausts_the_budget():
+    from portwatch.services.monitoring import watch_snapshots
+
+    now = [0.0]
+
+    def slow_scan():
+        now[0] += 1.0
+        return []
+
+    sleep = Mock()
+    assert list(
+        watch_snapshots(slow_scan, 0.2, 0, duration=0.5, clock=lambda: now[0], sleep=sleep)
+    ) == [[]]
+    sleep.assert_not_called()
+
+
 @pytest.mark.parametrize(
     "options",
     [

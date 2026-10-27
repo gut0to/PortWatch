@@ -101,6 +101,11 @@ def verify_runtime(command: list[str]) -> None:
             assert inspected["pid"] == fixture_pid
             owners = json.loads(run("inspect", str(port), "--all", "--json"))
             assert any(item["pid"] == fixture_pid for item in owners)
+            assert json.loads(run("check", str(port), "--expect", "busy", "--json"))["matches"]
+            block = json.loads(run("next", "1024", "--count", "2", "--contiguous", "--json"))[
+                "ports"
+            ]
+            assert block[1] == block[0] + 1
             assert int(run("next", str(port))) > port
             batch = json.loads(run("next", str(port), "--count", "2", "--json"))["ports"]
             assert len(set(batch)) == 2 and all(candidate > port for candidate in batch)
@@ -144,6 +149,19 @@ def verify_runtime(command: list[str]) -> None:
             changes = json.loads(run("diff", str(snapshot), str(watch_log), "--json"))
             assert not any(changes.values())
             summary_file = Path(working_directory, "summary.json")
+            history = json.loads(run("history", str(watch_log), "--json"))
+            assert history["scans"] == 1
+            offline = json.loads(run("list", "--input", str(snapshot), "--json"))
+            assert any(item["pid"] == fixture_pid for item in offline)
+            csv_snapshot = Path(working_directory, "ports.csv")
+            assert not run("convert", str(snapshot), "--to", "csv", "--output", str(csv_snapshot))
+            changes = json.loads(run("diff", str(snapshot), str(csv_snapshot), "--json"))
+            assert not any(changes.values())
+            assert (
+                json.loads(run("inspect", str(port), "--input", str(snapshot), "--json"))["pid"]
+                == fixture_pid
+            )
+            assert json.loads(run("summary", "--input", str(snapshot), "--json"))["ports"] == 1
             assert not run("summary", "--ports", str(port), "--output", str(summary_file))
             assert json.loads(summary_file.read_text(encoding="utf-8"))["listeners"] >= 1
             watched = [
@@ -188,8 +206,18 @@ def verify_runtime(command: list[str]) -> None:
                         time.sleep(0.1)
                 with urlopen(base, timeout=5) as response:
                     html = response.read().decode("utf-8")
+                with urlopen(f"{base}/api/health", timeout=5) as response:
+                    health = json.load(response)
+                    assert health["status"] == "ready" and health["uptime_seconds"] >= 0
                 paths = set(re.findall(r'(?:href|src)="(/?[^"#]+\.(?:js|css|svg))"', html))
-                paths.update({"dashboard-api.js", "dashboard-view.js", "dashboard-render.js"})
+                paths.update(
+                    {
+                        "dashboard-api.js",
+                        "dashboard-view.js",
+                        "dashboard-render.js",
+                        "dashboard-search.js",
+                    }
+                )
                 assert paths
                 for path in paths:
                     with urlopen(f"{base}/{path.lstrip('/')}", timeout=5) as response:
