@@ -901,7 +901,7 @@ def _read_ports(input_path: Path | None, bounds: PortRange | None = None) -> lis
 @app.command("check")
 @report_system_errors
 def check_port(
-    port: Annotated[int, typer.Argument(help="Port whose listening state should be checked.")],
+    ports: Annotated[str, typer.Argument(help="Port whose listening state should be checked.")],
     expect: Annotated[
         ExpectedPortState, typer.Option("--expect", help="Expected listening state.")
     ] = ExpectedPortState.free,
@@ -911,18 +911,26 @@ def check_port(
 ) -> None:
     """Check a port's scan state; exit 7 when it differs from the expectation."""
     try:
-        validate_port(port)
+        selected = parse_port_selection(ports)
     except InvalidPortError as error:
         _fail(str(error), 2)
-    listening = any(item.port == port for item in service.scanner.list_listening_ports())
-    matches = listening == (expect == ExpectedPortState.busy)
+    occupied = {item.port for item in service.scanner.list_listening_ports()}
+    results = [
+        {
+            "port": port,
+            "listening": port in occupied,
+            "expected": expect.value,
+            "matches": (port in occupied) == (expect == ExpectedPortState.busy),
+        }
+        for port in sorted(selected)
+    ]
+    matches = all(item["matches"] for item in results)
     if as_json:
         typer.echo(
-            json.dumps(
-                {"port": port, "listening": listening, "expected": expect.value, "matches": matches}
-            )
+            json.dumps(results[0] if len(results) == 1 else {"ports": results, "matches": matches})
         )
     else:
-        console.print(Text(f"Port {port}: {'busy' if listening else 'free'}"))
+        for item in results:
+            console.print(Text(f"Port {item['port']}: {'busy' if item['listening'] else 'free'}"))
     if not matches:
         raise typer.Exit(code=7)

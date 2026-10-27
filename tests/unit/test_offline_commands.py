@@ -83,3 +83,15 @@ def test_port_state_check_uses_exit_codes_and_never_resolves_metadata(monkeypatc
     assert runner.invoke(cli.app, ["check", "3000", "--expect", "busy"]).exit_code == 0
     assert runner.invoke(cli.app, ["check", "4000"]).exit_code == 0
     assert runner.invoke(cli.app, ["check", "0"]).exit_code == 2
+
+
+def test_multi_port_checks_use_one_inventory_and_preserve_single_result_shape(monkeypatch):
+    from portwatch.domain.models import PortInfo
+
+    scan = Mock(return_value=[PortInfo(3000, "tcp", "LISTENING")])
+    monkeypatch.setattr(cli.service.scanner, "list_listening_ports", scan)
+    result = CliRunner().invoke(cli.app, ["check", "3000,4000-4001", "--json"])
+    assert result.exit_code == 7
+    assert len(json.loads(result.stdout)["ports"]) == 3
+    scan.assert_called_once()
+    assert CliRunner().invoke(cli.app, ["check", "3000-3000", "--expect", "busy"]).exit_code == 0
