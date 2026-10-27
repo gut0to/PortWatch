@@ -292,3 +292,11 @@ one scan. It returns 7 when any selected port differs from the expectation.
 This describes a scan snapshot; it does not prove that binding a socket will
 succeed. `next --count 3 --contiguous --exclude 3005` finds a consecutive block
 without crossing busy or reserved port numbers.
+
+
+`watch --duration 30` stops scheduling scans after 30 monotonic seconds (an
+in-flight scan completes). `--events` emits JSON `changes` with added, removed,
+and changed records; the first emitted snapshot is compared with an empty set.
+Event streams are not snapshot files. `--redact` also applies to event payloads.
+`--heartbeat N` emits unchanged snapshots every N scan attempts when
+`--changes-only` is active. `--count` includes suppressed and baseline scans.

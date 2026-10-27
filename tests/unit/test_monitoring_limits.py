@@ -106,3 +106,16 @@ def test_watch_heartbeat_emits_periodic_unchanged_snapshots():
     )
     with pytest.raises(ValueError):
         list(watch_snapshots(lambda: [], 0.2, 1, heartbeat=-1))
+
+
+def test_cli_watch_heartbeat_reaches_the_monitor(monkeypatch):
+    from typer.testing import CliRunner
+
+    import portwatch.cli as cli
+
+    watch = Mock(return_value=iter([[]]))
+    monkeypatch.setattr(cli, "watch_snapshots", watch)
+    result = CliRunner().invoke(
+        cli.app, ["watch", "--heartbeat", "3", "--changes-only", "--count", "1", "--json"]
+    )
+    assert result.exit_code == 0 and watch.call_args.kwargs["heartbeat"] == 3

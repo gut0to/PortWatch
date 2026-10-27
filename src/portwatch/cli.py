@@ -365,6 +365,12 @@ def free(
 @app.command()
 @report_system_errors
 def watch(
+    heartbeat: Annotated[
+        int,
+        typer.Option(
+            "--heartbeat", min=0, help="Emit unchanged results every N scans; 0 disables."
+        ),
+    ] = 0,
     events: Annotated[
         bool, typer.Option("--events", help="Emit JSON differences between observed snapshots.")
     ] = False,
@@ -443,6 +449,7 @@ def watch(
         duration=duration,
         changes_only=changes_only,
         skip_initial=skip_initial,
+        heartbeat=heartbeat,
         sleep=time.sleep,
     )
     try:
@@ -463,20 +470,18 @@ def watch(
                         changes = redact_changes(changes)
                     previous = ports
                     payload = json.dumps(
-                        
-                            {
-                                "changes": changes,
-                                "scanned_at": datetime.now().astimezone().isoformat(),
-                            }
-                            if events
-                            else {
-                                "ports": [
-                                    port_to_dict(item)
-                                    for item in (redact_snapshot(ports) if redact else ports)
-                                ],
-                                "scanned_at": datetime.now().astimezone().isoformat(),
-                            }
-                        
+                        {
+                            "changes": changes,
+                            "scanned_at": datetime.now().astimezone().isoformat(),
+                        }
+                        if events
+                        else {
+                            "ports": [
+                                port_to_dict(item)
+                                for item in (redact_snapshot(ports) if redact else ports)
+                            ],
+                            "scanned_at": datetime.now().astimezone().isoformat(),
+                        }
                     )
                     if stream is None:
                         typer.echo(payload)
