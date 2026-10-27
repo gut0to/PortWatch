@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from datetime import datetime
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
@@ -53,6 +54,18 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             return
 
         request = urlsplit(self.path)
+        if request.path == "/api/health":
+            from portwatch import __version__
+
+            self._send_json(
+                HTTPStatus.OK,
+                {
+                    "status": "ready",
+                    "version": __version__,
+                    "uptime_seconds": max(0.0, time.monotonic() - self.server.started_at),
+                },
+            )
+            return
         if request.path == "/api/session":
             self._send_json(HTTPStatus.OK, {"token": self.server.token})
             return
