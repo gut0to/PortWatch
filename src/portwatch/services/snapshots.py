@@ -1,6 +1,7 @@
 """Validate portable listener snapshots and compare their process identities."""
 
 import json
+import math
 import os
 import tempfile
 from dataclasses import replace
@@ -69,7 +70,7 @@ def load_snapshot(path: Path) -> list[PortInfo]:
     text = raw.decode("utf-8-sig")
     if path.suffix.casefold() in {".jsonl", ".ndjson"}:
         return decode_json_lines(text)
-    return decode_snapshot(json.loads(text, object_pairs_hook=_unique_fields))
+    return decode_snapshot(parse_snapshot_json(text))
 
 
 def _identity(item: PortInfo) -> tuple[int, str, int, str]:
@@ -156,7 +157,7 @@ def decode_json_lines(text: str) -> list[PortInfo]:
         if not line.strip():
             continue
         try:
-            rows.append(json.loads(line, object_pairs_hook=_unique_fields))
+            rows.append(parse_snapshot_json(line))
         except ValueError as error:
             raise ValueError(f"Invalid JSON on line {line_number}: {error}") from error
     if rows and all(isinstance(row, dict) and "ports" in row for row in rows):
@@ -182,3 +183,36 @@ def redact_changes(
         ]
         for kind, rows in changes.items()
     }
+
+
+def _reject_constant(value: str) -> object:
+    raise ValueError(f"Non-finite snapshot number: {value}.")
+
+
+def _finite_float(value: str) -> float:
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError("Snapshot numbers must be finite.")
+    return number
+
+
+def parse_snapshot_json(text: str) -> object:
+    try:
+        data = json.loads(
+            text,
+            object_pairs_hook=_unique_fields,
+            parse_constant=_reject_constant,
+            parse_float=_finite_float,
+        )
+        pending = [(data, 0)]
+        while pending:
+            value, depth = pending.pop()
+            if depth > 64:
+                raise ValueError("Snapshot JSON is nested too deeply.")
+            if isinstance(value, list):
+                pending.extend((item, depth + 1) for item in value)
+            elif isinstance(value, dict):
+                pending.extend((item, depth + 1) for item in value.values())
+        return data
+    except RecursionError as error:
+        raise ValueError("Snapshot JSON is nested too deeply.") from error
