@@ -34,6 +34,7 @@ from portwatch.presentation.serializers import (
 from portwatch.presentation.tables import ports_table, watch_view
 from portwatch.services.history import (
     SnapshotFrame,
+    history_events,
     load_history,
     parse_history_time,
     summarize_history,
@@ -732,6 +733,9 @@ def history_report(
     until: Annotated[
         str | None, typer.Option("--until", help="Inclusive ISO timestamp with timezone.")
     ] = None,
+    events: Annotated[
+        bool, typer.Option("--events", help="Include timestamped listener transitions.")
+    ] = False,
     as_json: Annotated[bool, typer.Option("--json", help="Print history metrics as JSON.")] = False,
 ) -> None:
     """Analyze saved watch logs without scanning this machine."""
@@ -763,7 +767,9 @@ def history_report(
             SnapshotFrame(frame.scanned_at, tuple(filter_ports(list(frame.ports), search, pid=pid)))
             for frame in frames
         ]
-        report = summarize_history(frames)
+        report: dict[str, object] = dict(summarize_history(frames))
+        if events:
+            report["events"] = history_events(frames)
     except ValueError as error:
         _fail(str(error), 2)
     if as_json:

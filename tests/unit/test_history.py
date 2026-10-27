@@ -150,3 +150,17 @@ def test_history_time_window_is_inclusive(tmp_path):
         ).exit_code
         == 2
     )
+
+
+def test_history_events_skip_unchanged_scans(tmp_path):
+    from typer.testing import CliRunner
+
+    import portwatch.cli as cli
+
+    path = tmp_path / "watch.jsonl"
+    path.write_text(record(0) + "\n" + record(1) + "\n" + record(2, None))
+    report = json.loads(
+        CliRunner().invoke(cli.app, ["history", str(path), "--events", "--json"]).stdout
+    )
+    assert len(report["events"]) == 1
+    assert report["events"][0]["removed"][0]["port"] == 3000

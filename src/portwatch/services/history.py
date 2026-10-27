@@ -70,3 +70,12 @@ def summarize_history(frames: list[SnapshotFrame]) -> dict[str, int | float]:
         "removed": sum(len(change["removed"]) for change in changes),
         "changed": sum(len(change["changed"]) for change in changes),
     }
+
+
+def history_events(frames: list[SnapshotFrame]) -> list[dict[str, object]]:
+    events: list[dict[str, object]] = []
+    for previous, current in zip(frames, frames[1:], strict=False):
+        changes = diff_snapshots(list(previous.ports), list(current.ports))
+        if any(changes.values()):
+            events.append({"scanned_at": current.scanned_at.isoformat(), **changes})
+    return events
