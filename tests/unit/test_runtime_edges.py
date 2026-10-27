@@ -54,3 +54,13 @@ def test_snapshot_data_is_synced_before_publication_and_failures_do_not_replace_
     assert path.read_text() == "old"
     assert list(tmp_path.iterdir()) == [path]
     sync.assert_called_once()
+
+
+def test_version_is_available_even_when_a_subcommand_is_missing_arguments():
+    from typer.testing import CliRunner
+
+    import portwatch.cli as cli
+
+    for command in ("inspect", "diff", "history", "check"):
+        result = CliRunner().invoke(cli.app, ["--version", command])
+        assert result.exit_code == 0 and result.stdout.startswith("PortWatch ")

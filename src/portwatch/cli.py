@@ -98,17 +98,24 @@ service = PortService()
 terminator = ProcessTerminator()
 
 
-@app.callback(invoke_without_command=True)
-def main(
-    ctx: typer.Context,
-    version: Annotated[bool, typer.Option("--version", help="Show the version.")] = False,
-) -> None:
-    if version:
+def _show_version(value: bool) -> bool:
+    if value:
         from portwatch import __version__
 
         typer.echo(f"PortWatch {__version__}")
         raise typer.Exit()
-    elif ctx.invoked_subcommand is None:
+    return value
+
+
+@app.callback(invoke_without_command=True)
+def main(
+    ctx: typer.Context,
+    version: Annotated[
+        bool,
+        typer.Option("--version", help="Show the version.", is_eager=True, callback=_show_version),
+    ] = False,
+) -> None:
+    if ctx.invoked_subcommand is None:
         list_ports()
 
 
