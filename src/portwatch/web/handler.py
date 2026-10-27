@@ -8,7 +8,7 @@ from datetime import datetime
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
 from typing import TYPE_CHECKING, cast
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import SplitResult, parse_qs, urlsplit
 
 from portwatch.domain.exceptions import InvalidPortError, ProcessTerminationError
 from portwatch.presentation.serializers import port_to_dict
@@ -53,7 +53,9 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             self._send_error(HTTPStatus.FORBIDDEN, "This dashboard is available on localhost only.")
             return
 
-        request = urlsplit(self.path)
+        request = self._request_url()
+        if request is None:
+            return
         if request.path == "/api/health":
             from portwatch import __version__
 
@@ -75,7 +77,9 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         self._serve_static(request.path)
 
     def do_POST(self) -> None:
-        request = urlsplit(self.path)
+        request = self._request_url()
+        if request is None:
+            return
         if not self._has_expected_origin():
             self._send_error(HTTPStatus.FORBIDDEN, "Requests must come from this dashboard.")
             return
@@ -88,6 +92,16 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             self._send_error(HTTPStatus.NOT_FOUND, "This action is not available.")
             return
         self._terminate_port(parts[2])
+
+    def _request_url(self) -> SplitResult | None:
+        try:
+            request = urlsplit(self.path)
+            if request.scheme or request.netloc or not request.path.startswith("/"):
+                raise ValueError("Only local dashboard paths are accepted.")
+            return request
+        except ValueError:
+            self._send_error(HTTPStatus.BAD_REQUEST, "The dashboard request path is invalid.")
+            return None
 
     def log_message(self, format_string: str, *args: object) -> None:
         """Keep routine local requests out of the CLI output."""
