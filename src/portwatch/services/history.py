@@ -1,10 +1,13 @@
 """Analyze timestamped watch logs without requiring a live scanner."""
 
+import csv
+import io
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
 from portwatch.domain.models import PortInfo
+from portwatch.services.reports import summarize_ports
 from portwatch.services.snapshots import decode_snapshot, diff_snapshots, parse_snapshot_json
 
 
@@ -79,3 +82,15 @@ def history_events(frames: list[SnapshotFrame]) -> list[dict[str, object]]:
         if any(changes.values()):
             events.append({"scanned_at": current.scanned_at.isoformat(), **changes})
     return events
+
+
+def history_to_csv(frames: list[SnapshotFrame]) -> str:
+    output = io.StringIO(newline="")
+    fields = ["scanned_at", "listeners", "ports", "processes", "projects", "unresolved"]
+    writer = csv.DictWriter(output, fieldnames=fields, lineterminator="\n")
+    writer.writeheader()
+    for frame in frames:
+        writer.writerow(
+            {"scanned_at": frame.scanned_at.isoformat(), **summarize_ports(list(frame.ports))}
+        )
+    return output.getvalue().rstrip("\n")

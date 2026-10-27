@@ -35,6 +35,7 @@ from portwatch.presentation.tables import ports_table, watch_view
 from portwatch.services.history import (
     SnapshotFrame,
     history_events,
+    history_to_csv,
     load_history,
     parse_history_time,
     summarize_history,
@@ -736,9 +737,14 @@ def history_report(
     events: Annotated[
         bool, typer.Option("--events", help="Include timestamped listener transitions.")
     ] = False,
+    as_csv: Annotated[
+        bool, typer.Option("--csv", help="Print listener totals for every scan.")
+    ] = False,
     as_json: Annotated[bool, typer.Option("--json", help="Print history metrics as JSON.")] = False,
 ) -> None:
     """Analyze saved watch logs without scanning this machine."""
+    if as_csv and (as_json or events):
+        _fail("--csv cannot be combined with --json or --events.", 2)
     try:
         start_time = parse_history_time(since) if since else None
         end_time = parse_history_time(until) if until else None
@@ -772,7 +778,9 @@ def history_report(
             report["events"] = history_events(frames)
     except ValueError as error:
         _fail(str(error), 2)
-    if as_json:
+    if as_csv:
+        typer.echo(history_to_csv(frames))
+    elif as_json:
         typer.echo(json.dumps(report))
     else:
         for label, value in report.items():
