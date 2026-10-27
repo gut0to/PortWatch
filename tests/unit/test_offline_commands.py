@@ -40,3 +40,21 @@ def test_summary_operates_on_saved_snapshots(saved):
     assert result.exit_code == 0 and json.loads(result.stdout)["listeners"] == 2
     saved.write_text("bad")
     assert CliRunner().invoke(cli.app, ["summary", "--input", str(saved)]).exit_code == 2
+
+
+def test_inspection_uses_snapshot_owners_and_distinct_missing_code(saved):
+    runner = CliRunner()
+    result = runner.invoke(cli.app, ["inspect", "3000", "--input", str(saved), "--json"])
+    assert result.exit_code == 0 and json.loads(result.stdout)["pid"] == 42
+    assert (
+        len(
+            json.loads(
+                runner.invoke(
+                    cli.app, ["inspect", "3000", "--input", str(saved), "--all", "--json"]
+                ).stdout
+            )
+        )
+        == 1
+    )
+    assert runner.invoke(cli.app, ["inspect", "5000", "--input", str(saved)]).exit_code == 3
+    assert runner.invoke(cli.app, ["inspect", "0", "--input", str(saved)]).exit_code == 2

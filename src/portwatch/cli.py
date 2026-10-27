@@ -238,14 +238,26 @@ def list_ports(
 @report_system_errors
 def inspect(
     port: Annotated[int, typer.Argument(help="Port to inspect.")],
+    input_path: Annotated[
+        Path | None,
+        typer.Option("--input", exists=True, dir_okay=False, help="Inspect a saved snapshot."),
+    ] = None,
     all_owners: Annotated[
         bool, typer.Option("--all", help="Inspect every process owning this port.")
     ] = False,
     as_json: Annotated[bool, typer.Option("--json", help="Print machine-readable JSON.")] = False,
 ) -> None:
     try:
-        items = service.inspect_all(port) if all_owners else [service.inspect(port)]
-    except (InvalidPortError, PortNotFoundError) as error:
+        if input_path is None:
+            items = service.inspect_all(port) if all_owners else [service.inspect(port)]
+        else:
+            validate_port(port)
+            items = _read_ports(input_path, PortRange(port, port))
+            if not items:
+                raise PortNotFoundError(f"Port {port} is absent from the snapshot.")
+            if not all_owners:
+                items = items[:1]
+    except (ValueError, PortNotFoundError) as error:
         if isinstance(error, PortNotFoundError):
             _fail(str(error), 3)
         _fail(str(error), 2)
