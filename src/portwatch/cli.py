@@ -32,7 +32,12 @@ from portwatch.presentation.serializers import (
     ports_to_json_lines,
 )
 from portwatch.presentation.tables import ports_table, watch_view
-from portwatch.services.history import SnapshotFrame, load_history, summarize_history
+from portwatch.services.history import (
+    SnapshotFrame,
+    load_history,
+    parse_history_time,
+    summarize_history,
+)
 from portwatch.services.monitoring import watch_snapshots
 from portwatch.services.port_filters import filter_ports
 from portwatch.services.port_service import PortService
@@ -721,11 +726,26 @@ def history_report(
     pid: Annotated[
         int | None, typer.Option("--pid", min=1, help="Filter historical process IDs.")
     ] = None,
+    since: Annotated[
+        str | None, typer.Option("--since", help="Inclusive ISO timestamp with timezone.")
+    ] = None,
+    until: Annotated[
+        str | None, typer.Option("--until", help="Inclusive ISO timestamp with timezone.")
+    ] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Print history metrics as JSON.")] = False,
 ) -> None:
     """Analyze saved watch logs without scanning this machine."""
     try:
-        frames = load_history(path)
+        start_time = parse_history_time(since) if since else None
+        end_time = parse_history_time(until) if until else None
+        if start_time and end_time and start_time > end_time:
+            raise ValueError("--since must not be after --until.")
+        frames = [
+            frame
+            for frame in load_history(path)
+            if (start_time is None or frame.scanned_at >= start_time)
+            and (end_time is None or frame.scanned_at <= end_time)
+        ]
         selection = parse_port_selection(selected_ports) if selected_ports is not None else None
         excluded = parse_port_selection(exclude) if exclude is not None else frozenset()
         frames = [
