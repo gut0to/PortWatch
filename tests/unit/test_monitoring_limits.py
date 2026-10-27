@@ -95,3 +95,14 @@ def test_watch_event_stream_reports_transitions_without_exposing_redacted_data(m
     assert rows[0]["changes"]["added"][0]["command"] is None
     assert rows[1]["changes"]["removed"][0]["port"] == 3000
     assert "secret" not in result.stdout
+
+
+def test_watch_heartbeat_emits_periodic_unchanged_snapshots():
+    from portwatch.services.monitoring import watch_snapshots
+
+    assert (
+        len(list(watch_snapshots(lambda: [], 0.2, 5, changes_only=True, heartbeat=2, sleep=Mock())))
+        == 3
+    )
+    with pytest.raises(ValueError):
+        list(watch_snapshots(lambda: [], 0.2, 1, heartbeat=-1))

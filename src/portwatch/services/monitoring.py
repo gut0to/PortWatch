@@ -16,6 +16,7 @@ def watch_snapshots(
     clock: Callable[[], float] = time.monotonic,
     changes_only: bool = False,
     skip_initial: bool = False,
+    heartbeat: int = 0,
     sleep: Callable[[float], None] = time.sleep,
 ) -> Iterator[list[PortInfo]]:
     if not math.isfinite(interval) or interval < 0.2:
@@ -24,6 +25,8 @@ def watch_snapshots(
         raise ValueError("Watch count must be a nonnegative integer.")
     if duration is not None and (not math.isfinite(duration) or duration <= 0):
         raise ValueError("Watch duration must be finite and positive.")
+    if isinstance(heartbeat, bool) or not isinstance(heartbeat, int) or heartbeat < 0:
+        raise ValueError("Heartbeat must be a nonnegative scan count.")
     deadline = clock() + duration if duration is not None else None
     previous: frozenset[PortInfo] | None = None
     scans = 0
@@ -32,7 +35,9 @@ def watch_snapshots(
             return
         ports = scan()
         signature = frozenset(ports)
-        if (not skip_initial or scans > 0) and (not changes_only or signature != previous):
+        if (not skip_initial or scans > 0) and (
+            not changes_only or signature != previous or (heartbeat > 0 and scans % heartbeat == 0)
+        ):
             yield ports
         previous = signature
         scans += 1
