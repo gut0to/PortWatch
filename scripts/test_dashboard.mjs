@@ -213,3 +213,20 @@ test("dashboard requests time out and always release their timer", async () => {
   await assert.rejects(pending, /15 seconds/);
   assert.ok(cleared >= 3);
 });
+
+
+test("expired action sessions recover without retrying termination", async () => {
+  let stops = 0;
+  const { nodes, requests } = await dashboard({ respond(url) {
+    if (url.includes("terminate")) {
+      stops += 1;
+      return { ok: false, status: 403, json: async () => ({ error: "Confirm the action again." }) };
+    }
+  }});
+  nodes.get("#terminate").listeners.click();
+  nodes.get("#confirm-form").listeners.submit({ preventDefault() {} });
+  await new Promise(setImmediate);
+  assert.equal(stops, 1);
+  assert.equal(requests.filter(({url}) => url === "/api/session").length, 2);
+  assert.equal(nodes.get("#notice").textContent, "Confirm the action again.");
+});

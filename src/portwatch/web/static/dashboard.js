@@ -145,7 +145,10 @@ async function terminateSelected() {
     }
   } catch (error) {
     elements.dialog.close();
-    if (error.status === 409) await scan();
+    if (error.status === 403) {
+      state.token = "";
+      await scan();
+    } else if (error.status === 409) await scan();
     setNotice(error.message || "The process could not be stopped.", "error");
   } finally {
     state.terminating = false;
