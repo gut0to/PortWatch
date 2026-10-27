@@ -39,7 +39,9 @@ async function dashboard(options = {}) {
   const requests = [];
   let ports = [{ port: 3000, pid: 42, process_name: "python", protocol: "tcp", status: "LISTENING" }];
   const context = vm.createContext({
-    document, HTMLElement: Node, console,
+    document, HTMLElement: Node, console, AbortController,
+    setTimeout: configuration.setTimeout || setTimeout,
+    clearTimeout: configuration.clearTimeout || clearTimeout,
     fetch: async (url, options) => {
       requests.push({ url, options });
       if (configuration.respond) {
@@ -191,4 +193,23 @@ test("HTTP errors with null JSON bodies still explain their status", async () =>
     if (url === "/failure") return { ok: false, status: 503, json: async () => null };
   }});
   await assert.rejects(api.getJson("/failure"), /Request failed \(503\)/);
+});
+
+
+test("dashboard requests time out and always release their timer", async () => {
+  let timeout;
+  let cleared = 0;
+  const { api } = await dashboard({
+    setTimeout(callback) { timeout = callback; return 1; },
+    clearTimeout() { cleared += 1; },
+    respond(url, options) {
+      if (url === "/slow") return new Promise((resolve, reject) => {
+        options.signal.addEventListener("abort", () => reject(new Error("aborted")));
+      });
+    },
+  });
+  const pending = api.getJson("/slow");
+  timeout();
+  await assert.rejects(pending, /15 seconds/);
+  assert.ok(cleared >= 3);
 });

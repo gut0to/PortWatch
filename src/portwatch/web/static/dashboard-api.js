@@ -1,8 +1,12 @@
 "use strict";
 
 export async function getJson(url, options = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
   const response = await fetch(url, {
     cache: "no-store",
+    signal: controller.signal,
     ...options,
     headers: { Accept: "application/json", ...options.headers },
   });
@@ -19,6 +23,14 @@ export async function getJson(url, options = {}) {
     throw error;
   }
   return data;
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error("The local dashboard did not respond within 15 seconds. Rescan to try again.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export function parseRange(elements) {
