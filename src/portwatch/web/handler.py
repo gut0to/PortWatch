@@ -97,6 +97,8 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             parameters = parse_qs(
                 query, strict_parsing=False, keep_blank_values=True, max_num_fields=16
             )
+            if parameters.keys() - {"start", "end"}:
+                raise ValueError("Only start and end query parameters are supported.")
             start = single_port_parameter(parameters, "start", "1")
             end = single_port_parameter(parameters, "end", str(MAX_PORT))
             port_range = parse_port_range(f"{start}-{end}")
