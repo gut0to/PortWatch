@@ -1,24 +1,36 @@
 "use strict";
 
 export async function getJson(url, options = {}) {
-  const response = await fetch(url, {
-    cache: "no-store",
-    ...options,
-    headers: { Accept: "application/json", ...options.headers },
-  });
-  let data;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    data = await response.json();
-  } catch {
-    throw new Error("The local dashboard returned an unreadable response.");
-  }
-  if (!response.ok) {
-    const message = typeof data?.error === "string" ? data.error : `Request failed (${response.status}).`;
-    const error = new Error(message);
-    error.status = response.status;
+    const response = await fetch(url, {
+      cache: "no-store",
+      signal: controller.signal,
+      ...options,
+      headers: { Accept: "application/json", ...options.headers },
+    });
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error("The local dashboard returned an unreadable response.");
+    }
+    if (!response.ok) {
+      const message = typeof data?.error === "string" ? data.error : `Request failed (${response.status}).`;
+      const error = new Error(message);
+      error.status = response.status;
+      throw error;
+    }
+    return data;
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error("The local dashboard did not respond within 15 seconds. Rescan to try again.");
+    }
     throw error;
+  } finally {
+    clearTimeout(timer);
   }
-  return data;
 }
 
 export function parseRange(elements) {

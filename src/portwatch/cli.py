@@ -21,7 +21,7 @@ from portwatch.domain.exceptions import (
     PortNotFoundError,
     ProcessTerminationError,
 )
-from portwatch.domain.models import PortInfo
+from portwatch.domain.models import PortInfo, PortRange
 from portwatch.presentation.console import format_port_count, print_inspection
 from portwatch.presentation.errors import report_system_errors
 from portwatch.presentation.serializers import (
@@ -32,6 +32,14 @@ from portwatch.presentation.serializers import (
     ports_to_json_lines,
 )
 from portwatch.presentation.tables import ports_table, watch_view
+from portwatch.services.history import (
+    SnapshotFrame,
+    history_events,
+    history_to_csv,
+    load_history,
+    parse_history_time,
+    summarize_history,
+)
 from portwatch.services.monitoring import watch_snapshots
 from portwatch.services.port_filters import filter_ports
 from portwatch.services.port_service import PortService
@@ -46,6 +54,17 @@ from portwatch.services.snapshots import (
 from portwatch.system.termination import ProcessTerminator
 from portwatch.utils.ports import parse_port_range, parse_port_selection, validate_port
 from portwatch.web.server import create_server
+
+
+class ExpectedPortState(StrEnum):
+    free = "free"
+    busy = "busy"
+
+
+class SnapshotFormat(StrEnum):
+    json = "json"
+    jsonl = "jsonl"
+    csv = "csv"
 
 
 class GroupSortField(StrEnum):
@@ -79,23 +98,39 @@ service = PortService()
 terminator = ProcessTerminator()
 
 
-@app.callback(invoke_without_command=True)
-def main(
-    ctx: typer.Context,
-    version: Annotated[bool, typer.Option("--version", help="Show the version.")] = False,
-) -> None:
-    if version:
+def _show_version(value: bool) -> bool:
+    if value:
         from portwatch import __version__
 
         typer.echo(f"PortWatch {__version__}")
         raise typer.Exit()
-    elif ctx.invoked_subcommand is None:
+    return value
+
+
+@app.callback(invoke_without_command=True)
+def main(
+    ctx: typer.Context,
+    version: Annotated[
+        bool,
+        typer.Option("--version", help="Show the version.", is_eager=True, callback=_show_version),
+    ] = False,
+) -> None:
+    if ctx.invoked_subcommand is None:
         list_ports()
 
 
 @app.command("list")
 @report_system_errors
 def list_ports(
+    input_path: Annotated[
+        Path | None,
+        typer.Option(
+            "--input",
+            exists=True,
+            dir_okay=False,
+            help="Read a saved snapshot instead of scanning.",
+        ),
+    ] = None,
     redact: Annotated[
         bool, typer.Option("--redact", help="Remove commands and working directories.")
     ] = False,
@@ -156,14 +191,14 @@ def list_ports(
         selection = parse_port_selection(selected_ports) if selected_ports is not None else None
         parsed_range = parse_port_range(port_range) if port_range else None
         ports = filter_ports(
-            service.list_ports(parsed_range),
+            _read_ports(input_path, parsed_range),
             search,
             pid=pid,
             process=process,
             project=project,
             exact=exact,
         )
-    except InvalidPortError as error:
+    except ValueError as error:
         _fail(str(error), 2)
     if selection is not None:
         ports = [item for item in ports if item.port in selection]
@@ -215,14 +250,26 @@ def list_ports(
 @report_system_errors
 def inspect(
     port: Annotated[int, typer.Argument(help="Port to inspect.")],
+    input_path: Annotated[
+        Path | None,
+        typer.Option("--input", exists=True, dir_okay=False, help="Inspect a saved snapshot."),
+    ] = None,
     all_owners: Annotated[
         bool, typer.Option("--all", help="Inspect every process owning this port.")
     ] = False,
     as_json: Annotated[bool, typer.Option("--json", help="Print machine-readable JSON.")] = False,
 ) -> None:
     try:
-        items = service.inspect_all(port) if all_owners else [service.inspect(port)]
-    except (InvalidPortError, PortNotFoundError) as error:
+        if input_path is None:
+            items = service.inspect_all(port) if all_owners else [service.inspect(port)]
+        else:
+            validate_port(port)
+            items = _read_ports(input_path, PortRange(port, port))
+            if not items:
+                raise PortNotFoundError(f"Port {port} is absent from the snapshot.")
+            if not all_owners:
+                items = items[:1]
+    except (ValueError, PortNotFoundError) as error:
         if isinstance(error, PortNotFoundError):
             _fail(str(error), 3)
         _fail(str(error), 2)
@@ -239,6 +286,9 @@ def inspect(
 @report_system_errors
 def next(
     port: Annotated[int, typer.Argument(help="Starting port.")],
+    contiguous: Annotated[
+        bool, typer.Option("--contiguous", help="Require consecutive free port numbers.")
+    ] = False,
     exclude: Annotated[
         str | None, typer.Option("--exclude", help="Skip reserved ports and ranges.")
     ] = None,
@@ -255,9 +305,13 @@ def next(
         excluded = parse_port_selection(exclude) if exclude is not None else frozenset()
     except InvalidPortError as error:
         _fail(str(error), 2)
-    if count > 1 or excluded:
+    if count > 1 or excluded or contiguous:
         try:
-            found = service.available_ports(port, count, end, excluded=excluded)
+            found = (
+                service.available_port_block(port, count, end, excluded=excluded)
+                if contiguous
+                else service.available_ports(port, count, end, excluded=excluded)
+            )
         except InvalidPortError as error:
             _fail(str(error), 2)
         except PortNotFoundError as error:
@@ -318,6 +372,19 @@ def free(
 @app.command()
 @report_system_errors
 def watch(
+    heartbeat: Annotated[
+        int,
+        typer.Option(
+            "--heartbeat", min=0, help="Emit unchanged results every N scans; 0 disables."
+        ),
+    ] = 0,
+    events: Annotated[
+        bool, typer.Option("--events", help="Emit JSON differences between observed snapshots.")
+    ] = False,
+    duration: Annotated[
+        float | None,
+        typer.Option("--duration", min=0.2, help="Maximum monitoring duration in seconds."),
+    ] = None,
     skip_initial: Annotated[
         bool, typer.Option("--skip-initial", help="Establish a baseline without emitting it.")
     ] = False,
@@ -356,6 +423,8 @@ def watch(
         str | None, typer.Option("--range", help="Filter ports, e.g. 3000-9000.")
     ] = None,
 ) -> None:
+    if duration is not None and not math.isfinite(duration):
+        _fail("Watch duration must be finite.", 2)
     if not math.isfinite(interval):
         _fail("Refresh interval must be finite.", 2)
     try:
@@ -384,8 +453,10 @@ def watch(
         scan_selected,
         interval,
         count,
+        duration=duration,
         changes_only=changes_only,
         skip_initial=skip_initial,
+        heartbeat=heartbeat,
         sleep=time.sleep,
     )
     try:
@@ -398,10 +469,20 @@ def watch(
                 )
             except FileExistsError:
                 _fail("The watch log already exists. Choose a new output path.", 2)
-            if as_json or stream is not None:
+            if as_json or stream is not None or events:
+                previous: list[PortInfo] = []
                 for ports in snapshots:
+                    changes = diff_snapshots(previous, ports) if events else {}
+                    if events and redact:
+                        changes = redact_changes(changes)
+                    previous = ports
                     payload = json.dumps(
                         {
+                            "changes": changes,
+                            "scanned_at": datetime.now().astimezone().isoformat(),
+                        }
+                        if events
+                        else {
                             "ports": [
                                 port_to_dict(item)
                                 for item in (redact_snapshot(ports) if redact else ports)
@@ -503,6 +584,10 @@ def _fail(message: str, code: int) -> NoReturn:
 @app.command()
 @report_system_errors
 def summary(
+    input_path: Annotated[
+        Path | None,
+        typer.Option("--input", exists=True, dir_okay=False, help="Summarize a saved snapshot."),
+    ] = None,
     sort: Annotated[
         GroupSortField, typer.Option("--sort", help="Order grouped summary rows.")
     ] = GroupSortField.name,
@@ -544,14 +629,14 @@ def summary(
         excluded = parse_port_selection(exclude) if exclude is not None else frozenset()
         bounds = parse_port_range(port_range) if port_range else None
         ports = filter_ports(
-            service.list_ports(bounds),
+            _read_ports(input_path, bounds),
             search,
             pid=pid,
             process=process,
             project=project,
             exact=exact,
         )
-    except InvalidPortError as error:
+    except ValueError as error:
         _fail(str(error), 2)
     ports = [
         item
@@ -700,3 +785,193 @@ def doctor(
             console.print(Text(f"{label}: {value}"))
     if code:
         raise typer.Exit(code=code)
+
+
+@app.command("history")
+@report_system_errors
+def history_report(
+    path: Annotated[
+        Path, typer.Argument(exists=True, dir_okay=False, help="JSON Lines watch log.")
+    ],
+    selected_ports: Annotated[
+        str | None, typer.Option("--ports", help="Analyze selected ports.")
+    ] = None,
+    exclude: Annotated[
+        str | None, typer.Option("--exclude", help="Exclude selected ports.")
+    ] = None,
+    search: Annotated[
+        str, typer.Option("--search", help="Filter historical listener metadata.")
+    ] = "",
+    pid: Annotated[
+        int | None, typer.Option("--pid", min=1, help="Filter historical process IDs.")
+    ] = None,
+    since: Annotated[
+        str | None, typer.Option("--since", help="Inclusive ISO timestamp with timezone.")
+    ] = None,
+    until: Annotated[
+        str | None, typer.Option("--until", help="Inclusive ISO timestamp with timezone.")
+    ] = None,
+    events: Annotated[
+        bool, typer.Option("--events", help="Include timestamped listener transitions.")
+    ] = False,
+    as_csv: Annotated[
+        bool, typer.Option("--csv", help="Print listener totals for every scan.")
+    ] = False,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Save a history report.")
+    ] = None,
+    overwrite: Annotated[
+        bool, typer.Option("--overwrite", help="Replace an existing report.")
+    ] = False,
+    as_json: Annotated[bool, typer.Option("--json", help="Print history metrics as JSON.")] = False,
+) -> None:
+    """Analyze saved watch logs without scanning this machine."""
+    if overwrite and output is None:
+        _fail("--overwrite requires --output.", 2)
+    if as_csv and (as_json or events):
+        _fail("--csv cannot be combined with --json or --events.", 2)
+    try:
+        start_time = parse_history_time(since) if since else None
+        end_time = parse_history_time(until) if until else None
+        if start_time and end_time and start_time > end_time:
+            raise ValueError("--since must not be after --until.")
+        frames = [
+            frame
+            for frame in load_history(path)
+            if (start_time is None or frame.scanned_at >= start_time)
+            and (end_time is None or frame.scanned_at <= end_time)
+        ]
+        selection = parse_port_selection(selected_ports) if selected_ports is not None else None
+        excluded = parse_port_selection(exclude) if exclude is not None else frozenset()
+        frames = [
+            SnapshotFrame(
+                frame.scanned_at,
+                tuple(
+                    item
+                    for item in frame.ports
+                    if (selection is None or item.port in selection) and item.port not in excluded
+                ),
+            )
+            for frame in frames
+        ]
+        frames = [
+            SnapshotFrame(frame.scanned_at, tuple(filter_ports(list(frame.ports), search, pid=pid)))
+            for frame in frames
+        ]
+        report: dict[str, object] = dict(summarize_history(frames))
+        if events:
+            report["events"] = history_events(frames)
+    except ValueError as error:
+        _fail(str(error), 2)
+    if output is not None:
+        try:
+            write_snapshot(
+                output,
+                history_to_csv(frames) if as_csv else json.dumps(report, indent=2),
+                overwrite=overwrite,
+            )
+        except FileExistsError:
+            _fail("The report exists. Use --overwrite to replace it.", 2)
+    elif as_csv:
+        typer.echo(history_to_csv(frames))
+    elif as_json:
+        typer.echo(json.dumps(report))
+    else:
+        for label, value in report.items():
+            console.print(Text(f"{label}: {value}"))
+
+
+@app.command("convert")
+@report_system_errors
+def convert_snapshot(
+    path: Annotated[
+        Path, typer.Argument(exists=True, dir_okay=False, help="Listener snapshot file.")
+    ],
+    search: Annotated[
+        str, typer.Option("--search", help="Filter listener metadata before conversion.")
+    ] = "",
+    selected_ports: Annotated[
+        str | None, typer.Option("--ports", help="Select ports and ranges.")
+    ] = None,
+    redact: Annotated[
+        bool, typer.Option("--redact", help="Remove commands and directories.")
+    ] = False,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Save the converted snapshot.")
+    ] = None,
+    overwrite: Annotated[
+        bool, typer.Option("--overwrite", help="Replace an existing output file.")
+    ] = False,
+    to: Annotated[
+        SnapshotFormat, typer.Option("--to", help="Target snapshot format.")
+    ] = SnapshotFormat.json,
+) -> None:
+    """Convert validated snapshots between JSON, JSON Lines, and CSV."""
+    if overwrite and output is None:
+        _fail("--overwrite requires --output.", 2)
+    try:
+        selection = parse_port_selection(selected_ports) if selected_ports is not None else None
+        ports = filter_ports(load_snapshot(path), search)
+        if selection is not None:
+            ports = [item for item in ports if item.port in selection]
+        if redact:
+            ports = redact_snapshot(ports)
+    except ValueError as error:
+        _fail(str(error), 2)
+    content = (
+        ports_to_csv(ports)
+        if to == SnapshotFormat.csv
+        else (ports_to_json_lines(ports) if to == SnapshotFormat.jsonl else ports_to_json(ports))
+    )
+    if output is not None:
+        try:
+            write_snapshot(output, content, overwrite=overwrite)
+        except FileExistsError:
+            _fail("The output file exists. Use --overwrite to replace it.", 2)
+    elif content:
+        typer.echo(content)
+
+
+def _read_ports(input_path: Path | None, bounds: PortRange | None = None) -> list[PortInfo]:
+    if input_path is None:
+        return service.list_ports(bounds)
+    ports = load_snapshot(input_path)
+    return [item for item in ports if bounds is None or bounds.start <= item.port <= bounds.end]
+
+
+@app.command("check")
+@report_system_errors
+def check_port(
+    ports: Annotated[str, typer.Argument(help="Port whose listening state should be checked.")],
+    expect: Annotated[
+        ExpectedPortState, typer.Option("--expect", help="Expected listening state.")
+    ] = ExpectedPortState.free,
+    as_json: Annotated[
+        bool, typer.Option("--json", help="Print the check result as JSON.")
+    ] = False,
+) -> None:
+    """Check a port's scan state; exit 7 when it differs from the expectation."""
+    try:
+        selected = parse_port_selection(ports)
+    except InvalidPortError as error:
+        _fail(str(error), 2)
+    occupied = {item.port for item in service.scanner.list_listening_ports()}
+    results = [
+        {
+            "port": port,
+            "listening": port in occupied,
+            "expected": expect.value,
+            "matches": (port in occupied) == (expect == ExpectedPortState.busy),
+        }
+        for port in sorted(selected)
+    ]
+    matches = all(item["matches"] for item in results)
+    if as_json:
+        typer.echo(
+            json.dumps(results[0] if len(results) == 1 else {"ports": results, "matches": matches})
+        )
+    else:
+        for item in results:
+            console.print(Text(f"Port {item['port']}: {'busy' if item['listening'] else 'free'}"))
+    if not matches:
+        raise typer.Exit(code=7)

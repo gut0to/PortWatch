@@ -3,6 +3,9 @@
 import { element, elements, icon, listenerKey } from "./dashboard-view.js";
 
 export function renderDashboard(ports, allPorts, selectedListener, query) {
+  const focused = document.activeElement;
+  const focusedKey = focused?.dataset?.listener;
+  const focusedPanel = focusedKey ? focused.closest("#listener-list, #route-list") : null;
   renderListeners(ports, selectedListener);
   renderRoutes(ports, selectedListener);
   renderInspector(allPorts.find((port) => listenerKey(port) === selectedListener) || null);
@@ -17,6 +20,11 @@ export function renderDashboard(ports, allPorts, selectedListener, query) {
     ? "No listeners match this search."
     : "No listening routes to show in this range.";
   elements.clearSearch.hidden = !hasQuery;
+  if (focusedPanel) {
+    const buttons = Array.from(focusedPanel.querySelectorAll("button[data-listener]"));
+    const next = buttons.find((button) => button.dataset.listener === focusedKey) || buttons[0] || elements.search;
+    next.focus({ preventScroll: true });
+  }
 }
 
 function renderListeners(ports, selectedListener) {

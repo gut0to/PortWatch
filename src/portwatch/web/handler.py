@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import json
+import time
 from datetime import datetime
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
 from typing import TYPE_CHECKING, cast
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import SplitResult, parse_qs, urlsplit
 
 from portwatch.domain.exceptions import InvalidPortError, ProcessTerminationError
 from portwatch.presentation.serializers import port_to_dict
@@ -52,7 +53,21 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             self._send_error(HTTPStatus.FORBIDDEN, "This dashboard is available on localhost only.")
             return
 
-        request = urlsplit(self.path)
+        request = self._request_url()
+        if request is None:
+            return
+        if request.path == "/api/health":
+            from portwatch import __version__
+
+            self._send_json(
+                HTTPStatus.OK,
+                {
+                    "status": "ready",
+                    "version": __version__,
+                    "uptime_seconds": max(0.0, time.monotonic() - self.server.started_at),
+                },
+            )
+            return
         if request.path == "/api/session":
             self._send_json(HTTPStatus.OK, {"token": self.server.token})
             return
@@ -62,7 +77,9 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         self._serve_static(request.path)
 
     def do_POST(self) -> None:
-        request = urlsplit(self.path)
+        request = self._request_url()
+        if request is None:
+            return
         if not self._has_expected_origin():
             self._send_error(HTTPStatus.FORBIDDEN, "Requests must come from this dashboard.")
             return
@@ -76,6 +93,16 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             return
         self._terminate_port(parts[2])
 
+    def _request_url(self) -> SplitResult | None:
+        try:
+            request = urlsplit(self.path)
+            if request.scheme or request.netloc or not request.path.startswith("/"):
+                raise ValueError("Only local dashboard paths are accepted.")
+            return request
+        except ValueError:
+            self._send_error(HTTPStatus.BAD_REQUEST, "The dashboard request path is invalid.")
+            return None
+
     def log_message(self, format_string: str, *args: object) -> None:
         """Keep routine local requests out of the CLI output."""
 
@@ -84,6 +111,8 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             parameters = parse_qs(
                 query, strict_parsing=False, keep_blank_values=True, max_num_fields=16
             )
+            if parameters.keys() - {"start", "end"}:
+                raise ValueError("Only start and end query parameters are supported.")
             start = single_port_parameter(parameters, "start", "1")
             end = single_port_parameter(parameters, "end", str(MAX_PORT))
             port_range = parse_port_range(f"{start}-{end}")
@@ -105,10 +134,10 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
 
     def _terminate_port(self, raw_port: str) -> None:
         try:
+            payload = self._read_json_body()
             port = int(raw_port)
             if not 1 <= port <= MAX_PORT:
                 raise ValueError("Port must be between 1 and 65535.")
-            payload = self._read_json_body()
             started_at = payload.get("started_at")
             if started_at is not None and not isinstance(started_at, str):
                 raise ValueError("Process start time must be a string or null.")

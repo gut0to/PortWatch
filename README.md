@@ -260,3 +260,43 @@ results only within a scan, so later scans still observe filesystem changes.
 architecture, psutil version, and whether the local TCP scan succeeds. It does
 not inspect command lines or terminate processes. An unavailable scan returns
 1, or 4 for insufficient permissions, while preserving the JSON diagnostic data.
+
+
+### Analyze saved monitoring history
+
+`portwatch history watch.jsonl --json` reports scan count, duration, listener
+peaks, unique ports, and added/removed/changed listener totals. History files
+must contain timezone-aware `scanned_at` values in chronological order and be
+at most 10 MiB. Empty scans remain part of the timeline.
+
+Use `--ports`, `--exclude`, `--search`, or `--pid` to focus the analysis. `--since`
+and `--until` accept inclusive ISO timestamps with timezone offsets. `--events`
+adds timestamped transitions; `--csv` instead exports a row of totals per scan.
+`--output` saves a report, with explicit `--overwrite` required for replacement.
+
+
+### Work with saved snapshots
+
+`list`, `summary`, and `inspect` accept `--input snapshot.json` to query a file
+without scanning the machine. JSON arrays, dashboard envelopes, JSON Lines,
+watch logs, and CSV listener exports are accepted. CSV safety apostrophes remain
+literal text on import; use JSON for exact metadata preservation.
+
+`convert snapshot.csv --to json|jsonl|csv` writes a converted snapshot to stdout.
+Use `--output` to save it, `--overwrite` for explicit replacement, and `--ports`,
+`--search`, or `--redact` to prepare focused exports.
+
+
+`check 3000,4000-4002 --expect free|busy --json` checks listener presence in
+one scan. It returns 7 when any selected port differs from the expectation.
+This describes a scan snapshot; it does not prove that binding a socket will
+succeed. `next --count 3 --contiguous --exclude 3005` finds a consecutive block
+without crossing busy or reserved port numbers.
+
+
+`watch --duration 30` stops scheduling scans after 30 monotonic seconds (an
+in-flight scan completes). `--events` emits JSON `changes` with added, removed,
+and changed records; the first emitted snapshot is compared with an empty set.
+Event streams are not snapshot files. `--redact` also applies to event payloads.
+`--heartbeat N` emits unchanged snapshots every N scan attempts when
+`--changes-only` is active. `--count` includes suppressed and baseline scans.

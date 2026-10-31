@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from http.server import ThreadingHTTPServer
 
 from portwatch.services.port_service import PortService
@@ -23,6 +24,7 @@ class DashboardHTTPServer(ThreadingHTTPServer):
         terminator: ProcessTerminator,
         token: str,
     ) -> None:
+        self.started_at = time.monotonic()
         self.service = service
         self.terminator = terminator
         self.token = token

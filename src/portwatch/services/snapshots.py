@@ -1,6 +1,9 @@
 """Validate portable listener snapshots and compare their process identities."""
 
+import csv
+import io
 import json
+import math
 import os
 import tempfile
 from dataclasses import replace
@@ -67,9 +70,11 @@ def load_snapshot(path: Path) -> list[PortInfo]:
     if len(raw) > MAX_SNAPSHOT_BYTES:
         raise ValueError("Snapshot files must be at most 10 MiB.")
     text = raw.decode("utf-8-sig")
+    if path.suffix.casefold() == ".csv":
+        return decode_csv_snapshot(text)
     if path.suffix.casefold() in {".jsonl", ".ndjson"}:
         return decode_json_lines(text)
-    return decode_snapshot(json.loads(text, object_pairs_hook=_unique_fields))
+    return decode_snapshot(parse_snapshot_json(text))
 
 
 def _identity(item: PortInfo) -> tuple[int, str, int, str]:
@@ -127,6 +132,8 @@ def write_snapshot(path: Path, content: str, *, overwrite: bool = False) -> None
         ) as output:
             temporary = Path(output.name)
             output.write(content + ("\n" if content else ""))
+            output.flush()
+            os.fsync(output.fileno())
         if overwrite:
             os.replace(temporary, path)
         else:
@@ -156,7 +163,7 @@ def decode_json_lines(text: str) -> list[PortInfo]:
         if not line.strip():
             continue
         try:
-            rows.append(json.loads(line, object_pairs_hook=_unique_fields))
+            rows.append(parse_snapshot_json(line))
         except ValueError as error:
             raise ValueError(f"Invalid JSON on line {line_number}: {error}") from error
     if rows and all(isinstance(row, dict) and "ports" in row for row in rows):
@@ -182,3 +189,76 @@ def redact_changes(
         ]
         for kind, rows in changes.items()
     }
+
+
+def _reject_constant(value: str) -> object:
+    raise ValueError(f"Non-finite snapshot number: {value}.")
+
+
+def _finite_float(value: str) -> float:
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError("Snapshot numbers must be finite.")
+    return number
+
+
+def parse_snapshot_json(text: str) -> object:
+    try:
+        data = json.loads(
+            text,
+            object_pairs_hook=_unique_fields,
+            parse_constant=_reject_constant,
+            parse_float=_finite_float,
+        )
+        pending = [(data, 0)]
+        while pending:
+            value, depth = pending.pop()
+            if depth > 64:
+                raise ValueError("Snapshot JSON is nested too deeply.")
+            if isinstance(value, list):
+                pending.extend((item, depth + 1) for item in value)
+            elif isinstance(value, dict):
+                pending.extend((item, depth + 1) for item in value.values())
+        return data
+    except RecursionError as error:
+        raise ValueError("Snapshot JSON is nested too deeply.") from error
+
+
+def decode_csv_snapshot(text: str) -> list[PortInfo]:
+    reader = csv.DictReader(io.StringIO(text), strict=True)
+    fields = reader.fieldnames
+    if (
+        fields is None
+        or len(fields) != len(set(fields))
+        or not {"port", "protocol", "status"} <= set(fields)
+    ):
+        raise ValueError("CSV snapshots require unique port, protocol, and status columns.")
+    if set(fields) - PortInfo.__dataclass_fields__.keys():
+        raise ValueError("CSV snapshot contains unknown columns.")
+    rows: list[dict[str, object]] = []
+    try:
+        for row in reader:
+            if None in row or any(value is None for value in row.values()):
+                raise ValueError("CSV snapshot rows must match their header.")
+            converted: dict[str, object] = dict(row)
+            for name in ("port", "pid"):
+                value = row.get(name, "")
+                if name == "pid" and not value:
+                    converted[name] = None
+                    continue
+                if not value.isascii() or not value.isdecimal() or len(value) > 10:
+                    raise ValueError(f"CSV {name} must be a decimal integer.")
+                converted[name] = int(value)
+            for name in (
+                "process_name",
+                "project_name",
+                "command",
+                "working_directory",
+                "started_at",
+            ):
+                if name in converted and converted[name] == "":
+                    converted[name] = None
+            rows.append(converted)
+    except csv.Error as error:
+        raise ValueError(f"Invalid CSV snapshot: {error}") from error
+    return decode_snapshot(rows)

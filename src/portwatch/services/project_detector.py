@@ -32,7 +32,12 @@ class ProjectDetector:
             if not current.is_dir():
                 return None
             for directory in (current, *current.parents):
-                if any((directory / marker).exists() for marker in PROJECT_MARKERS) or any(
+                if any(
+                    (directory / marker).exists()
+                    if marker == ".git"
+                    else (directory / marker).is_file()
+                    for marker in PROJECT_MARKERS
+                ) or any(
                     path.is_file()
                     for pattern in ("*.csproj", "*.fsproj", "*.sln", "*.slnx")
                     for path in directory.glob(pattern)

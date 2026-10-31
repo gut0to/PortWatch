@@ -12,25 +12,42 @@ async function dashboard(options = {}) {
       this.listeners = {};
       this.value = "";
       this.textContent = "";
+      this.children = [];
     }
     setAttribute() {}
     removeAttribute() {}
-    append() {}
-    replaceChildren() {}
+    append(...nodes) {
+      for (const node of nodes) {
+        if (node.tagName === "#FRAGMENT") this.append(...node.children);
+        else { node.parentElement = this; this.children.push(node); }
+      }
+    }
+    replaceChildren(...nodes) { this.children = []; this.append(...nodes); }
+    closest(selector) {
+      const ids = selector.split(",").map((part) => part.trim().slice(1));
+      for (let node = this; node; node = node.parentElement) if (ids.includes(node.id)) return node;
+      return null;
+    }
+    querySelectorAll() {
+      return this.children.flatMap((node) => [
+        ...(node.tagName === "BUTTON" && node.dataset.listener ? [node] : []),
+        ...node.querySelectorAll(),
+      ]);
+    }
     querySelector() { return new Node(); }
     addEventListener(name, callback) { this.listeners[name] = callback; }
     showModal() { this.open = true; }
     close() { this.open = false; }
-    focus() {}
+    focus() { document.activeElement = this; }
   }
   const document = {
     querySelector(selector) {
-      if (!nodes.has(selector)) nodes.set(selector, new Node());
+      if (!nodes.has(selector)) { const node = new Node(); node.id = selector.slice(1); nodes.set(selector, node); }
       return nodes.get(selector);
     },
-    createElement: () => new Node(),
+    createElement: (tag) => Object.assign(new Node(), {tagName: tag.toUpperCase()}),
     createElementNS: () => new Node(),
-    createDocumentFragment: () => new Node(),
+    createDocumentFragment: () => Object.assign(new Node(), {tagName: "#FRAGMENT"}),
     addEventListener() {},
   };
   document.querySelector("#range-start").value = "1";
@@ -39,7 +56,9 @@ async function dashboard(options = {}) {
   const requests = [];
   let ports = [{ port: 3000, pid: 42, process_name: "python", protocol: "tcp", status: "LISTENING" }];
   const context = vm.createContext({
-    document, HTMLElement: Node, console,
+    document, HTMLElement: Node, console, AbortController,
+    setTimeout: configuration.setTimeout || setTimeout,
+    clearTimeout: configuration.clearTimeout || clearTimeout,
     fetch: async (url, options) => {
       requests.push({ url, options });
       if (configuration.respond) {
@@ -65,7 +84,7 @@ async function dashboard(options = {}) {
   await root.link((specifier) => load(specifier.replace("./", "")));
   await root.evaluate();
   await new Promise(setImmediate);
-  return { nodes, requests, api: modules.get("dashboard-api.js").namespace, view: modules.get("dashboard-view.js").namespace, setPorts(value) { ports = value; } };
+  return { document, nodes, requests, api: modules.get("dashboard-api.js").namespace, view: modules.get("dashboard-view.js").namespace, setPorts(value) { ports = value; } };
 }
 
 test("confirmation opens for the selected listener and submits its PID", async () => {
@@ -191,4 +210,73 @@ test("HTTP errors with null JSON bodies still explain their status", async () =>
     if (url === "/failure") return { ok: false, status: 503, json: async () => null };
   }});
   await assert.rejects(api.getJson("/failure"), /Request failed \(503\)/);
+});
+
+
+test("dashboard requests time out and always release their timer", async () => {
+  let timeout;
+  let cleared = 0;
+  const { api } = await dashboard({
+    setTimeout(callback) { timeout = callback; return 1; },
+    clearTimeout() { cleared += 1; },
+    respond(url, options) {
+      if (url === "/slow") return new Promise((resolve, reject) => {
+        options.signal.addEventListener("abort", () => reject(new Error("aborted")));
+      });
+    },
+  });
+  const pending = api.getJson("/slow");
+  timeout();
+  await assert.rejects(pending, /15 seconds/);
+  assert.ok(cleared >= 3);
+});
+
+
+test("expired action sessions recover without retrying termination", async () => {
+  let stops = 0;
+  const { nodes, requests } = await dashboard({ respond(url) {
+    if (url.includes("terminate")) {
+      stops += 1;
+      return { ok: false, status: 403, json: async () => ({ error: "Confirm the action again." }) };
+    }
+  }});
+  nodes.get("#terminate").listeners.click();
+  nodes.get("#confirm-form").listeners.submit({ preventDefault() {} });
+  await new Promise(setImmediate);
+  assert.equal(stops, 1);
+  assert.equal(requests.filter(({url}) => url === "/api/session").length, 2);
+  assert.equal(nodes.get("#notice").textContent, "Confirm the action again.");
+});
+
+
+test("listener selection keys cannot collide through metadata delimiters", async () => {
+  const { view } = await dashboard();
+  const first = {port: 3000, pid: 42, protocol: "tcp", process_name: "a:b", started_at: "c"};
+  const second = {...first, process_name: "a", started_at: "b:c"};
+  assert.notEqual(view.listenerKey(first), view.listenerKey(second));
+  assert.equal(view.listenerKey(first), view.listenerKey({...first, process_name: "updated"}));
+});
+
+
+test("listener refresh preserves keyboard focus on the matching owner", async () => {
+  const { document, nodes } = await dashboard();
+  const first = nodes.get("#listener-list").querySelectorAll()[0];
+  first.focus();
+  await nodes.get("#rescan").listeners.click();
+  assert.notEqual(document.activeElement, first);
+  assert.equal(document.activeElement.dataset.listener, first.dataset.listener);
+});
+
+
+test("dashboard search combines terms and excludes negative metadata", async () => {
+  const { nodes, setPorts } = await dashboard();
+  setPorts([
+    {port:3000,pid:42,protocol:"tcp",status:"LISTENING",process_name:"python",project_name:"API"},
+    {port:4000,pid:43,protocol:"tcp",status:"LISTENING",process_name:"python-worker",project_name:"API"},
+  ]);
+  await nodes.get("#rescan").listeners.click();
+  nodes.get("#search").value = "PYTHON api -worker";
+  nodes.get("#search").listeners.input();
+  assert.equal(nodes.get("#visible-count").textContent, "1 shown");
+  assert.equal(nodes.get("#listener-list").querySelectorAll().length, 1);
 });
